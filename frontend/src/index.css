@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #000000;
+    --color-secondary: #ffffff;
+    --color-accent: #fafafa;
+    --border-width: 3px;
+    --border-radius: 4px;
+    --shadow-offset: 4px;
+  }
+
+  * {
+    @apply border-primary;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-secondary text-primary font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1 {
+    @apply text-h1 font-sans;
+  }
+
+  h2 {
+    @apply text-h2 font-sans;
+  }
+
+  h3 {
+    @apply text-h3 font-sans;
+  }
+
+  h4 {
+    @apply text-h4 font-sans;
+  }
+
+  p {
+    @apply text-body;
+  }
+
+  a {
+    @apply font-medium transition-colors;
+  }
+
+  button {
+    @apply font-medium;
+  }
+
+  code,
+  pre {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  .btn-base {
+    @apply inline-flex items-center justify-center px-sm py-xs border-3 border-primary bg-secondary text-primary font-medium transition-all duration-150 ease-in-out rounded-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0;
+  }
+
+  .btn-primary {
+    @apply btn-base shadow-brutalist;
+  }
+
+  .btn-secondary {
+    @apply btn-base bg-primary text-secondary shadow-brutalist;
+  }
+
+  .card-base {
+    @apply border-3 border-primary bg-secondary rounded-brutalist;
+  }
+
+  .card-elevated {
+    @apply card-base shadow-brutalist;
+  }
+
+  .card-elevated-lg {
+    @apply card-base shadow-brutalist-lg;
+  }
+
+  .input-base {
+    @apply w-full px-sm py-xs border-3 border-primary bg-secondary text-primary rounded-brutalist focus:outline-none focus:ring-0 focus:border-primary placeholder:text-primary/50 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .shadow-brutalist-hover {
+    @apply hover:shadow-brutalist-lg transition-shadow duration-150;
+  }
+
+  .translate-brutalist {
+    @apply hover:translate-x-[2px] hover:translate-y-[2px] transition-transform duration-150;
+  }
+}
