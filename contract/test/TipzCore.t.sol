@@ -144,7 +144,7 @@ contract TipzCoreTest is Test {
 
     // ============ Fee Calculation Tests ============
 
-    function testCalculateFee() public {
+    function testCalculateFee() public view {
         // 2% of 1 ether = 0.02 ether
         assertEq(tipzCore.calculateFee(1 ether), 0.02 ether);
 
@@ -155,7 +155,7 @@ contract TipzCoreTest is Test {
         assertEq(tipzCore.calculateFee(0.5 ether), 0.01 ether);
     }
 
-    function testFeeCalculationAccuracy() public {
+    function testFeeCalculationAccuracy() public view {
         uint256 tipAmount = 1.23456789 ether;
         uint256 fee = tipzCore.calculateFee(tipAmount);
         uint256 recipientAmount = tipAmount - fee;
@@ -167,7 +167,7 @@ contract TipzCoreTest is Test {
         assertEq(fee + recipientAmount, tipAmount);
     }
 
-    function testFuzzFeeCalculation(uint256 amount) public {
+    function testFuzzFeeCalculation(uint256 amount) public view {
         vm.assume(amount > 0 && amount < 1000000 ether);
 
         uint256 fee = tipzCore.calculateFee(amount);

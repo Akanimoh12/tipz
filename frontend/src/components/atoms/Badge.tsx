@@ -6,7 +6,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   size?: 'sm' | 'md';
 }
 
-export function Badge({ variant = 'default', size = 'md', className, children, ...props }: BadgeProps) {
+export function Badge({ variant = 'default', size = 'md', className, children, ...props }: Readonly<BadgeProps>) {
   const baseStyles = 'inline-flex items-center justify-center font-medium border-2 border-primary rounded-brutalist';
 
   const variants = {

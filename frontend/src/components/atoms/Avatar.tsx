@@ -9,7 +9,7 @@ interface AvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   fallbackText?: string;
 }
 
-export function Avatar({ src, alt, size = 'md', fallbackText, className, ...props }: AvatarProps) {
+export function Avatar({ src, alt, size = 'md', fallbackText, className, ...props }: Readonly<AvatarProps>) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 

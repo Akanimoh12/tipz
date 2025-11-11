@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import '@rainbow-me/rainbowkit/styles.css';
 import './index.css';
@@ -22,11 +23,12 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitConfig>
-          <App />
-          <Toaster
+    <HelmetProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitConfig>
+            <App />
+            <Toaster
             position={TOAST_CONFIG.POSITION}
             toastOptions={{
               duration: TOAST_CONFIG.DURATION.SUCCESS,
@@ -57,5 +59,6 @@ createRoot(document.getElementById('root')!).render(
         </RainbowKitConfig>
       </QueryClientProvider>
     </WagmiProvider>
+    </HelmetProvider>
   </StrictMode>
 );

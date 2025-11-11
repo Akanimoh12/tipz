@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'brand';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -12,9 +12,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium border-3 border-primary rounded-brutalist transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed';
     
     const variants = {
-      primary: 'bg-secondary text-primary shadow-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-brutalist',
-      secondary: 'bg-primary text-secondary shadow-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-brutalist',
-      ghost: 'bg-transparent text-primary hover:bg-accent active:bg-primary/10 disabled:hover:bg-transparent',
+      brand: 'bg-brand !text-primary shadow-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-brutalist',
+      primary: 'bg-secondary !text-primary shadow-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-brutalist',
+      secondary: 'bg-primary !text-secondary shadow-brutalist hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-brutalist',
+      ghost: 'bg-transparent !text-primary hover:bg-accent active:bg-primary/10 disabled:hover:bg-transparent',
     };
 
     const sizes = {

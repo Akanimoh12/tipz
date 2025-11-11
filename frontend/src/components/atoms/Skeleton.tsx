@@ -15,7 +15,7 @@ export function Skeleton({
   animate = true,
   className,
   ...props
-}: SkeletonProps) {
+}: Readonly<SkeletonProps>) {
   const variants = {
     text: 'rounded-brutalist h-4',
     circular: 'rounded-full',

@@ -22,7 +22,7 @@ interface RainbowKitConfigProps {
   children: ReactNode;
 }
 
-export function RainbowKitConfig({ children }: RainbowKitConfigProps) {
+export function RainbowKitConfig({ children }: Readonly<RainbowKitConfigProps>) {
   return (
     <RainbowKitProvider theme={brutalistTheme} modalSize="compact">
       {children}

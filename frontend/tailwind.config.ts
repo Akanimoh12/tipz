@@ -6,8 +6,9 @@ export default {
     extend: {
       colors: {
         primary: '#000000',
-        secondary: '#FFFFFF',
-        accent: '#FAFAFA',
+        secondary: '#FFFEF9', // Soft cream/milk white
+        accent: '#F5F4EF', // Slightly darker cream for cards
+        brand: '#FF6B9D', // Pink/rose for primary CTAs
       },
       fontFamily: {
         sans: ['"Space Grotesk"', '"Inter"', 'sans-serif'],

@@ -105,9 +105,29 @@ export function copyToClipboard(text: string): Promise<void> {
   textArea.select();
   
   return new Promise((resolve, reject) => {
-    const success = document.execCommand('copy');
-    textArea.remove();
-    success ? resolve() : reject(new Error('Copy command failed'));
+    // Use modern Clipboard API if available, fallback to deprecated execCommand
+    if (navigator.clipboard && globalThis.isSecureContext) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          textArea.remove();
+          resolve();
+        })
+        .catch((err) => {
+          textArea.remove();
+          reject(err);
+        });
+    } else {
+      // Fallback for older browsers (execCommand is deprecated but still works)
+      try {
+        // @ts-ignore - execCommand is deprecated but needed for legacy browser support
+        const success = document.execCommand('copy');
+        textArea.remove();
+        success ? resolve() : reject(new Error('Copy command failed'));
+      } catch (err) {
+        textArea.remove();
+        reject(err);
+      }
+    }
   });
 }
 

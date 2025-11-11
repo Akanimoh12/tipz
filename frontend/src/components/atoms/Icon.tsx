@@ -8,7 +8,7 @@ interface IconProps {
   'aria-label'?: string;
 }
 
-export function Icon({ icon: IconComponent, size = 'md', className, 'aria-label': ariaLabel }: IconProps) {
+export function Icon({ icon: IconComponent, size = 'md', className, 'aria-label': ariaLabel }: Readonly<IconProps>) {
   const sizes = {
     xs: 'w-3 h-3',
     sm: 'w-4 h-4',

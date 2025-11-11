@@ -6,7 +6,7 @@ interface SpinnerProps {
   'aria-label'?: string;
 }
 
-export function Spinner({ size = 'md', className, 'aria-label': ariaLabel = 'Loading' }: SpinnerProps) {
+export function Spinner({ size = 'md', className, 'aria-label': ariaLabel = 'Loading' }: Readonly<SpinnerProps>) {
   const sizes = {
     sm: 'w-4 h-4 border-2',
     md: 'w-6 h-6 border-3',
@@ -14,16 +14,15 @@ export function Spinner({ size = 'md', className, 'aria-label': ariaLabel = 'Loa
   };
 
   return (
-    <div
+    <output
       className={cn(
         'inline-block animate-spin rounded-full border-primary border-t-transparent',
         sizes[size],
         className
       )}
-      role="status"
       aria-label={ariaLabel}
     >
       <span className="sr-only">{ariaLabel}</span>
-    </div>
+    </output>
   );
 }

@@ -5,8 +5,9 @@
 @layer base {
   :root {
     --color-primary: #000000;
-    --color-secondary: #ffffff;
-    --color-accent: #fafafa;
+    --color-secondary: #FFFEF9;
+    --color-accent: #F5F4EF;
+    --color-brand: #FF6B9D;
     --border-width: 3px;
     --border-radius: 4px;
     --shadow-offset: 4px;
@@ -24,6 +25,11 @@
     @apply bg-secondary text-primary font-sans antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(0, 0, 0, 0.01) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(0, 0, 0, 0.01) 1px, transparent 1px);
+    background-size: 4px 4px;
+    background-position: 0 0, 2px 2px;
   }
 
   h1 {
