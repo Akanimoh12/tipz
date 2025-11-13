@@ -23,6 +23,16 @@ contract TipzCore is Ownable, ReentrancyGuard, Pausable {
         uint256 timestamp;
     }
 
+    // Leaderboard entry structure
+    struct LeaderboardEntry {
+        string username;
+        address walletAddress;
+        uint256 totalAmount;
+        uint256 count;
+        uint256 creditScore;
+        uint256 rank;
+    }
+
     // State variables
     ITipzProfile public immutable profileRegistry;
     address payable public platformWallet;
@@ -34,6 +44,13 @@ contract TipzCore is Ownable, ReentrancyGuard, Pausable {
     mapping(address => uint256) private _withdrawableBalances;
     TipRecord[] private _tipHistory;
     uint256 private _nextTipId = 1;
+
+    // Leaderboard tracking
+    address[] private _registeredUsers; // Users who have sent tips
+    mapping(address => uint256) private _userIndexInArray; // User position in array
+    mapping(address => uint256) private _tipsSentByUser; // Total tips sent per user
+    mapping(address => uint256) private _tipsSentCountByUser; // Number of tips sent
+    uint256 private _totalVolume; // Cumulative platform volume
 
     // Custom errors
     error RecipientNotRegistered();
@@ -129,6 +146,15 @@ contract TipzCore is Ownable, ReentrancyGuard, Pausable {
 
         // Update profile stats
         profileRegistry.updateTipStats(recipient, recipientAmount);
+
+        // Track sender's tips for leaderboard
+        if (_tipsSentByUser[msg.sender] == 0 && profileRegistry.isRegistered(msg.sender)) {
+            _userIndexInArray[msg.sender] = _registeredUsers.length;
+            _registeredUsers.push(msg.sender);
+        }
+        _tipsSentByUser[msg.sender] += msg.value;
+        _tipsSentCountByUser[msg.sender] += 1;
+        _totalVolume += msg.value;
 
         emit TipSent(
             tipId,
@@ -378,6 +404,242 @@ contract TipzCore is Ownable, ReentrancyGuard, Pausable {
         }
 
         return result;
+    }
+
+    // ============ LEADERBOARD FUNCTIONS ============
+
+    /**
+     * @notice Get top creators by tips received
+     * @param limit Maximum number of creators to return
+     * @return Array of LeaderboardEntry structs sorted by totalTipsReceived
+     */
+    function getTopCreators(uint256 limit) external view returns (LeaderboardEntry[] memory) {
+        uint256 totalUsers = _getTotalRegisteredUsers();
+        if (totalUsers == 0) {
+            return new LeaderboardEntry[](0);
+        }
+
+        // Create temporary array with all creators
+        LeaderboardEntry[] memory allCreators = new LeaderboardEntry[](totalUsers);
+        uint256 creatorCount = 0;
+
+        // Populate array with creator data
+        for (uint256 i = 0; i < totalUsers; i++) {
+            address userAddress = _getRegisteredUserAtIndex(i);
+            if (userAddress == address(0) || !profileRegistry.isRegistered(userAddress)) continue;
+
+            ITipzProfile.Profile memory profile = profileRegistry.getProfile(userAddress);
+            
+            // Only include users who have received tips
+            if (profile.totalTipsReceived > 0) {
+                allCreators[creatorCount] = LeaderboardEntry({
+                    username: profile.xUsername,
+                    walletAddress: userAddress,
+                    totalAmount: profile.totalTipsReceived,
+                    count: profile.totalTipsCount,
+                    creditScore: profile.creditScore,
+                    rank: 0 // Will be set after sorting
+                });
+                creatorCount++;
+            }
+        }
+
+        // Create properly sized array
+        LeaderboardEntry[] memory creators = new LeaderboardEntry[](creatorCount);
+        for (uint256 i = 0; i < creatorCount; i++) {
+            creators[i] = allCreators[i];
+        }
+
+        // Sort by totalAmount (descending)
+        _sortLeaderboardByAmount(creators);
+
+        // Assign ranks
+        for (uint256 i = 0; i < creators.length; i++) {
+            creators[i].rank = i + 1;
+        }
+
+        // Return limited results
+        if (limit == 0) {
+            return new LeaderboardEntry[](0);
+        }
+        
+        uint256 resultSize = limit < creators.length ? limit : creators.length;
+        LeaderboardEntry[] memory result = new LeaderboardEntry[](resultSize);
+        for (uint256 i = 0; i < resultSize; i++) {
+            result[i] = creators[i];
+        }
+
+        return result;
+    }
+
+    /**
+     * @notice Get top tippers by tips sent
+     * @param limit Maximum number of tippers to return
+     * @return Array of LeaderboardEntry structs sorted by totalTipsSent
+     */
+    function getTopTippers(uint256 limit) external view returns (LeaderboardEntry[] memory) {
+        if (_registeredUsers.length == 0) {
+            return new LeaderboardEntry[](0);
+        }
+
+        // Create array with all tippers
+        LeaderboardEntry[] memory allTippers = new LeaderboardEntry[](_registeredUsers.length);
+        uint256 tipperCount = 0;
+
+        for (uint256 i = 0; i < _registeredUsers.length; i++) {
+            address userAddress = _registeredUsers[i];
+            uint256 tipsSent = _tipsSentByUser[userAddress];
+
+            if (tipsSent > 0 && profileRegistry.isRegistered(userAddress)) {
+                ITipzProfile.Profile memory profile = profileRegistry.getProfile(userAddress);
+                
+                allTippers[tipperCount] = LeaderboardEntry({
+                    username: profile.xUsername,
+                    walletAddress: userAddress,
+                    totalAmount: tipsSent,
+                    count: _tipsSentCountByUser[userAddress],
+                    creditScore: profile.creditScore,
+                    rank: 0
+                });
+                tipperCount++;
+            }
+        }
+
+        // Create properly sized array
+        LeaderboardEntry[] memory tippers = new LeaderboardEntry[](tipperCount);
+        for (uint256 i = 0; i < tipperCount; i++) {
+            tippers[i] = allTippers[i];
+        }
+
+        // Sort by totalAmount (descending)
+        _sortLeaderboardByAmount(tippers);
+
+        // Assign ranks
+        for (uint256 i = 0; i < tippers.length; i++) {
+            tippers[i].rank = i + 1;
+        }
+
+        // Return limited results
+        if (limit == 0) {
+            return new LeaderboardEntry[](0);
+        }
+        
+        uint256 resultSize = limit < tippers.length ? limit : tippers.length;
+        LeaderboardEntry[] memory result = new LeaderboardEntry[](resultSize);
+        for (uint256 i = 0; i < resultSize; i++) {
+            result[i] = tippers[i];
+        }
+
+        return result;
+    }
+
+    /**
+     * @notice Get user's rank on creator leaderboard
+     * @param username X username
+     * @return Rank position (1-indexed, 0 if not ranked)
+     */
+    function getUserRank(string memory username) external view returns (uint256) {
+        address userAddress = profileRegistry.getAddressByUsername(username);
+        if (userAddress == address(0) || !profileRegistry.isRegistered(userAddress)) {
+            return 0;
+        }
+
+        ITipzProfile.Profile memory userProfile = profileRegistry.getProfile(userAddress);
+        if (userProfile.totalTipsReceived == 0) {
+            return 0;
+        }
+
+        // Count how many users have more tips than this user
+        uint256 rank = 1;
+        uint256 totalUsers = _getTotalRegisteredUsers();
+
+        for (uint256 i = 0; i < totalUsers; i++) {
+            address otherAddress = _getRegisteredUserAtIndex(i);
+            if (otherAddress == address(0) || otherAddress == userAddress) continue;
+            if (!profileRegistry.isRegistered(otherAddress)) continue;
+
+            ITipzProfile.Profile memory otherProfile = profileRegistry.getProfile(otherAddress);
+            if (otherProfile.totalTipsReceived > userProfile.totalTipsReceived) {
+                rank++;
+            }
+        }
+
+        return rank;
+    }
+
+    // ============ PLATFORM STATISTICS FUNCTIONS ============
+
+    /**
+     * @notice Get total number of registered users
+     * @return Total user count from profile registry
+     */
+    function getTotalUsers() external view returns (uint256) {
+        return _getTotalRegisteredUsers();
+    }
+
+    /**
+     * @notice Get total platform volume (sum of all tips)
+     * @return Total volume in wei
+     */
+    function getTotalVolume() external view returns (uint256) {
+        return _totalVolume;
+    }
+
+    /**
+     * @notice Get number of active creators (users with tips received > 0)
+     * @return Active creator count
+     */
+    function getActiveCreators() external view returns (uint256) {
+        uint256 activeCount = 0;
+        uint256 totalUsers = _getTotalRegisteredUsers();
+
+        for (uint256 i = 0; i < totalUsers; i++) {
+            address userAddress = _getRegisteredUserAtIndex(i);
+            if (userAddress == address(0) || !profileRegistry.isRegistered(userAddress)) continue;
+
+            ITipzProfile.Profile memory profile = profileRegistry.getProfile(userAddress);
+            if (profile.totalTipsReceived > 0) {
+                activeCount++;
+            }
+        }
+
+        return activeCount;
+    }
+
+    // ============ INTERNAL HELPER FUNCTIONS ============
+
+    /**
+     * @notice Sort leaderboard entries by totalAmount (descending)
+     * @dev Uses bubble sort - gas intensive for large arrays
+     */
+    function _sortLeaderboardByAmount(LeaderboardEntry[] memory entries) internal pure {
+        uint256 length = entries.length;
+        for (uint256 i = 0; i < length; i++) {
+            for (uint256 j = i + 1; j < length; j++) {
+                if (entries[i].totalAmount < entries[j].totalAmount) {
+                    // Swap
+                    LeaderboardEntry memory temp = entries[i];
+                    entries[i] = entries[j];
+                    entries[j] = temp;
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Get total registered users count
+     * @dev Calls TipzProfile contract for accurate count
+     */
+    function _getTotalRegisteredUsers() internal view returns (uint256) {
+        return profileRegistry.getTotalRegistrations();
+    }
+
+    /**
+     * @notice Get registered user address at index
+     * @dev Calls TipzProfile contract to get user at specific index
+     */
+    function _getRegisteredUserAtIndex(uint256 index) internal view returns (address) {
+        return profileRegistry.getRegisteredUserAtIndex(index);
     }
 
     // Admin functions

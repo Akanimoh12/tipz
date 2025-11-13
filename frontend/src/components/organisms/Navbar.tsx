@@ -11,9 +11,9 @@ interface NavLink {
 
 const navLinks: NavLink[] = [
   { label: 'Home', href: '/' },
-  { label: 'Dashboard', href: '/dashboard' },
   { label: 'Leaderboard', href: '/leaderboard' },
-  { label: 'Profile', href: '/profile' },
+  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Profile', href: '/@me' },
 ];
 
 export function Navbar() {

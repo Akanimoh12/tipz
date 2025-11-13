@@ -96,6 +96,10 @@ interface ITipzProfile {
         view
         returns (address);
 
+    function getTotalRegistrations() external view returns (uint256);
+
+    function getRegisteredUserAtIndex(uint256 index) external view returns (address);
+
     // ============ Admin Functions ============
 
     function pause() external;

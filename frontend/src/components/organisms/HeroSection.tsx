@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, TrendingUp, Shield } from 'lucide-react';
+import { useAccount } from 'wagmi';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/molecules/Card';
+import { useIsRegistered } from '@/hooks/useProfile';
 
 const features = [
   {
@@ -45,6 +48,20 @@ const itemVariants = {
 };
 
 export function HeroSection() {
+  const { isConnected, address } = useAccount();
+  const { isRegistered } = useIsRegistered(address);
+
+  // Determine CTA destination - Don't force registration, allow exploration
+  const getCtaDestination = () => {
+    if (isConnected && isRegistered) return '/dashboard';
+    return '/leaderboard'; // Let everyone explore creators first
+  };
+
+  const getCtaText = () => {
+    if (isConnected && isRegistered) return 'Go to Dashboard';
+    return 'Explore Creators'; // More inviting, less pushy
+  };
+
   return (
     <section className="relative py-2xl md:py-3xl overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -87,15 +104,30 @@ export function HeroSection() {
               variants={itemVariants}
               className="flex flex-col sm:flex-row gap-sm justify-center"
             >
-              <Button size="lg" variant="brand" className="font-bold">
-                <Zap className="w-5 h-5 mr-2xs" />
-                Start Tipping
-                <ArrowRight className="w-5 h-5 ml-2xs" />
-              </Button>
+              <Link to={getCtaDestination()}>
+                <Button size="lg" variant="brand" className="font-bold">
+                  {isConnected && isRegistered ? (
+                    <>
+                      <Zap className="w-5 h-5 mr-2xs" />
+                      {getCtaText()}
+                      <ArrowRight className="w-5 h-5 ml-2xs" />
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="w-5 h-5 mr-2xs" />
+                      {getCtaText()}
+                      <ArrowRight className="w-5 h-5 ml-2xs" />
+                    </>
+                  )}
+                </Button>
+              </Link>
               
-              <Button size="lg" variant="primary" className="font-bold">
-                Learn More
-              </Button>
+              <Link to="/dashboard">
+                <Button size="lg" variant="primary" className="font-bold">
+                  <Zap className="w-5 h-5 mr-2xs" />
+                  View Platform Stats
+                </Button>
+              </Link>
             </motion.div>
           </motion.div>
 

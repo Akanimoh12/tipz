@@ -32,6 +32,8 @@ contract TipzProfile is Ownable, ReentrancyGuard, Pausable {
     mapping(address => Profile) private _profiles;
     mapping(string => address) private _usernameToAddress;
     mapping(address => bool) private _registeredAddresses;
+    address[] private _allRegisteredUsers; // Track all registered users
+    uint256 private _totalRegistrations; // Total registration count
 
     // Constants for validation
     uint8 public constant MIN_USERNAME_LENGTH = 1;
@@ -125,6 +127,10 @@ contract TipzProfile is Ownable, ReentrancyGuard, Pausable {
         // Update mappings
         _usernameToAddress[username] = msg.sender;
         _registeredAddresses[msg.sender] = true;
+
+        // Track registration for leaderboard queries
+        _allRegisteredUsers.push(msg.sender);
+        _totalRegistrations++;
 
         emit ProfileCreated(msg.sender, username, creditScore, block.timestamp);
     }
@@ -349,5 +355,25 @@ contract TipzProfile is Ownable, ReentrancyGuard, Pausable {
         Profile storage profile = _profiles[user];
         profile.withdrawableBalance -= amount;
         profile.totalWithdrawn += amount;
+    }
+
+    /**
+     * @notice Get total number of registrations
+     * @return Total count of registered users
+     */
+    function getTotalRegistrations() external view returns (uint256) {
+        return _totalRegistrations;
+    }
+
+    /**
+     * @notice Get registered user address at specific index
+     * @param index Array index
+     * @return User address (or address(0) if out of bounds)
+     */
+    function getRegisteredUserAtIndex(uint256 index) external view returns (address) {
+        if (index >= _allRegisteredUsers.length) {
+            return address(0);
+        }
+        return _allRegisteredUsers[index];
     }
 }
