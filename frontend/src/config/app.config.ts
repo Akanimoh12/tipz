@@ -102,10 +102,9 @@ export const CACHE_CONFIG = {
 } as const;
 
 export const STREAMS_CONFIG = {
-  ENDPOINT: import.meta.env.VITE_SOMNIA_STREAMS_ENDPOINT || '',
-  RECONNECT_INTERVAL: 3000,
-  MAX_RECONNECT_ATTEMPTS: 5,
-  HEARTBEAT_INTERVAL: 30000,
+  ENABLED: import.meta.env.VITE_ENABLE_STREAMS === 'true',
+  POLL_INTERVAL: Number(import.meta.env.VITE_STREAMS_POLL_INTERVAL) || 1000,
+  EVENT_PUBLISHING_ENABLED: import.meta.env.VITE_ENABLE_EVENT_PUBLISHING === 'true',
 } as const;
 
 export const SOCIAL_SHARE = {

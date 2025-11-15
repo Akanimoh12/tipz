@@ -17,9 +17,9 @@ Tipz is a brutalist-designed Web3 tipping platform that connects supporters with
 ### Frontend
 - **Framework:** React 18 + Vite + TypeScript
 - **Styling:** Tailwind CSS (Brutalist theme)
-- **Web3:** Wagmi v2, Viem, RainbowKit
+- **Web3:** Wagmi v2, Viem v2.38.6, RainbowKit
 - **State Management:** Zustand + TanStack Query v5
-- **Real-time:** Somnia Data Streams SDK
+- **Real-time Data:** Somnia Data Streams SDK v0.10.1 (polling-based subscriptions)
 - **Storage:** Pinata Web3 (IPFS)
 - **Forms:** React Hook Form + Zod
 - **UI Components:** Headless UI, Lucide React, Framer Motion
@@ -90,9 +90,12 @@ nano .env
 **Required environment variables:**
 - `VITE_SOMNIA_TESTNET_RPC_URL` - Somnia testnet RPC URL
 - `VITE_SOMNIA_MAINNET_RPC_URL` - Somnia mainnet RPC URL
-- `VITE_SOMNIA_TESTNET_CHAIN_ID` - Testnet chain ID
-- `VITE_SOMNIA_MAINNET_CHAIN_ID` - Mainnet chain ID
-- `VITE_SOMNIA_STREAMS_ENDPOINT` - Somnia Data Streams WebSocket endpoint
+- `VITE_SOMNIA_TESTNET_CHAIN_ID` - Testnet chain ID (50312)
+- `VITE_SOMNIA_MAINNET_CHAIN_ID` - Mainnet chain ID (5031)
+- `VITE_WALLETCONNECT_PROJECT_ID` - WalletConnect project ID
+- `VITE_ENABLE_STREAMS` - Enable Somnia Data Streams (true/false)
+- `VITE_STREAMS_POLL_INTERVAL` - Polling interval in ms (default: 1000)
+- `VITE_ENABLE_EVENT_PUBLISHING` - Enable automatic event publishing (true/false)
 - `VITE_PINATA_API_KEY` - Pinata API key for IPFS
 - `VITE_PINATA_API_SECRET` - Pinata API secret
 - `VITE_PINATA_GATEWAY_URL` - Pinata gateway URL
@@ -292,7 +295,8 @@ Upload `dist/` folder to your hosting provider (Vercel, Netlify, AWS, etc.)
 ## Key Features
 
 - ✅ **Instant Tips:** Send cryptocurrency tips to creators with zero delay
-- ✅ **Real-time Streaming:** Live ticker showing recent tips across platform
+- ✅ **Real-time Data Streams:** Live updates using Somnia Data Streams SDK (~2-3s latency)
+- ✅ **Automatic Event Publishing:** Contract events automatically published to streams
 - ✅ **Creator Profiles:** Rich profiles with IPFS-stored metadata
 - ✅ **Credit Score System:** On-chain reputation tracking
 - ✅ **Rewards Program:** Loyalty rewards for frequent supporters
@@ -300,15 +304,49 @@ Upload `dist/` folder to your hosting provider (Vercel, Netlify, AWS, etc.)
 - ✅ **Brutalist UI:** Clean, accessible, black/white design
 - ✅ **Web3 Native:** RainbowKit wallet connection
 - ✅ **Low Fees:** Somnia Network's efficient EVM execution
+- ✅ **No Backend Required:** Direct blockchain queries from frontend
+
+## Somnia Data Streams Integration
+
+Tipz uses **Somnia Data Streams SDK** for real-time data synchronization between smart contracts and the UI. This provides:
+
+- **Direct Blockchain Queries**: No centralized backend needed
+- **Polling-based Subscriptions**: 1-second intervals for fresh data  
+- **Automatic Event Publishing**: Contract events → Streams → UI
+- **Type-safe Schemas**: Solidity-like type system
+- **Sub-second Finality**: Data available almost immediately
+
+### Architecture
+
+```
+User Transaction → Smart Contract → Event Listener → Transform → 
+Publish to Streams → Polling Subscription → React Hooks → UI Update
+Total Latency: ~2-3 seconds
+```
+
+### Key Components
+
+- **somniaStreamsService**: Core SDK wrapper for read/write operations
+- **contractEventListenerService**: Detects and publishes contract events using viem
+- **Adapter Service**: Backwards-compatible wrapper for existing components
+- **React Hooks**: `useTipStream`, `useProfileStream`, `useLeaderboardStream`
+
+### Documentation
+
+- **[frontend/docs/SOMNIA_STREAMS.md](./frontend/docs/SOMNIA_STREAMS.md)**: Complete integration guide
+- **[frontend/docs/TROUBLESHOOTING.md](./frontend/docs/TROUBLESHOOTING.md)**: Common issues and solutions
+- **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)**: Pre-production checklist
 
 ## Documentation
 
+- **SOMNIA_STREAMS_INTEGRATION_PROMPTS.md:** 9 sequential prompts for Somnia Streams integration
 - **BUILD_PROMPTS.md:** 15 sequential development prompts for implementation
 - **project_structure.md:** Complete architectural specification (no code, pure structure)
 - **Foundry Book:** https://book.getfoundry.sh/
 - **Wagmi Docs:** https://wagmi.sh/
 - **Viem Docs:** https://viem.sh/
 - **Somnia Docs:** https://docs.somnia.network/
+- **Somnia Streams SDK:** https://github.com/somnia-network/streams-sdk
 
 ## Troubleshooting
 

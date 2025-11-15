@@ -61,7 +61,6 @@ export const VALIDATION_RULES = {
 export const API_ENDPOINTS = {
   SOMNIA_TESTNET_RPC: import.meta.env.VITE_SOMNIA_TESTNET_RPC_URL,
   SOMNIA_MAINNET_RPC: import.meta.env.VITE_SOMNIA_MAINNET_RPC_URL,
-  SOMNIA_STREAMS: import.meta.env.VITE_SOMNIA_STREAMS_ENDPOINT,
   PINATA_API: 'https://api.pinata.cloud',
 } as const;
 

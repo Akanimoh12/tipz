@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { streamsService } from '../services/streams.service';
-import type { StreamEvent, StreamSubscription } from '../config/streams.config';
+import { streamsService } from '../services/streams-adapter.service';
+import type { StreamEvent, StreamSubscription } from '../services/streams-adapter.service';
 
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
@@ -39,10 +39,22 @@ export function useStreams<T extends StreamEvent>(
   const subscriptionRef = useRef<StreamSubscription | null>(null);
   const onEventRef = useRef(onEvent);
   const connectionCheckInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
+
+  // Initialize Somnia SDK on first mount
+  useEffect(() => {
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      streamsService.initialize().catch((error) => {
+        console.error('Failed to initialize Somnia Streams SDK:', error);
+        setError(error instanceof Error ? error : new Error('SDK initialization failed'));
+      });
+    }
+  }, []);
 
   const handleEvent = useCallback(
     (event: T) => {

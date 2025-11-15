@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar, Footer, TipModal, WithdrawModal, CelebrationModal } from '@/components/organisms';
 import { Skeleton } from '@/components/atoms';
+import { useContractEventListener } from '@/hooks/useContractEventListener';
 
 // Lazy load pages for code splitting
 const Landing = lazy(() => import('@/pages').then(module => ({ default: module.Landing })));
@@ -22,9 +23,40 @@ function PageLoader() {
 }
 
 export default function App() {
+  // Initialize contract event listener
+  // Automatically starts when wallet connects and stops when disconnects
+  const { isListening, metrics, error } = useContractEventListener({
+    autoStart: true,
+    enableLogging: import.meta.env.DEV,
+  });
+
+  // Log event listener status in development
+  if (import.meta.env.DEV && error) {
+    console.error('Contract event listener error:', error);
+  }
+
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen">
+        {/* Development: Show event listener status */}
+        {import.meta.env.DEV && isListening && (
+          <div className="bg-green-500/10 border-b-2 border-green-500 px-md py-xs text-xs">
+            <div className="container mx-auto flex items-center justify-between">
+              <span className="flex items-center gap-xs">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="font-medium">Event Listener Active</span>
+              </span>
+              <span className="text-primary/70">
+                Tips: {metrics.tipsDetected}/{metrics.tipsPublished} | 
+                Profiles: {metrics.profilesCreatedDetected + metrics.profilesUpdatedDetected}/
+                {metrics.profilesCreatedPublished + metrics.profilesUpdatedPublished}
+                {metrics.publishErrors > 0 && ` | Errors: ${metrics.publishErrors}`}
+                {metrics.queueSize > 0 && ` | Queue: ${metrics.queueSize}`}
+              </span>
+            </div>
+          </div>
+        )}
+        
         <Navbar />
         
         <div className="flex-1">

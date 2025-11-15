@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatTipAmount, formatTimestamp } from '../services/contract.service';
 import { useTipStream } from './useStreams';
-import type { TipEvent } from '../config/streams.config';
+import type { TipEvent } from '../services/streams-adapter.service';
 
 const TICKER_WINDOW_SIZE = 10;
 
