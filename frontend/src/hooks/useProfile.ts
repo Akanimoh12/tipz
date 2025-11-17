@@ -1,8 +1,8 @@
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAccount, useReadContract } from 'wagmi';
 import { type Address } from 'viem';
-import { useProfileRead, useProfileWrite } from './useContract';
-import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI, transformProfile, type Profile } from '../services/contract.service';
+import { useProfileWrite } from './useContract';
+import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI, transformProfile } from '../services/contract.service';
 
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 

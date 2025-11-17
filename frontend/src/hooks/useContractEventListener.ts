@@ -72,7 +72,7 @@ export function useContractEventListener(
 ): UseContractEventListenerResult {
   const { autoStart = true, enableLogging = false } = options;
 
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
   const [isListening, setIsListening] = useState(false);

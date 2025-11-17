@@ -26,12 +26,12 @@ const rankEmoji = (rank: number): string => {
   return `${rank}`;
 };
 
-// Get IPFS image URL
-const getIpfsUrl = (ipfsHash?: string): string | undefined => {
-  if (!ipfsHash) return undefined;
-  const gatewayUrl = import.meta.env.VITE_PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud';
-  return `${gatewayUrl}/ipfs/${ipfsHash}`;
-};
+// Get IPFS image URL (currently unused but ready for future enhancement)
+// const getIpfsUrl = (ipfsHash?: string): string | undefined => {
+//   if (!ipfsHash) return undefined;
+//   const gatewayUrl = import.meta.env.VITE_PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud';
+//   return `${gatewayUrl}/ipfs/${ipfsHash}`;
+// };
 
 // Animation variants
 const containerVariants = {

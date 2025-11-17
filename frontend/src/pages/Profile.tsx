@@ -53,7 +53,7 @@ export function Profile() {
     isMyProfile ? connectedAddress : undefined
   );
   const { profile: profileByUsername, isLoading: loadingByUsername, isError } = useProfileByUsername(
-    !isMyProfile ? cleanUsername : ''
+    isMyProfile ? '' : cleanUsername
   );
 
   // Use the appropriate profile
@@ -62,7 +62,7 @@ export function Profile() {
 
   // Fetch tips using the actual username from the profile
   const actualUsername = contractProfile?.xUsername || cleanUsername;
-  const { tipsReceived: recentTipsRaw, isLoading: tipsLoading } = useTipsReceived(actualUsername, 10);
+  const { tipsReceived: recentTipsRaw } = useTipsReceived(actualUsername, 10);
   const { tips: streamTips, isConnected } = useLiveTickerStream({ 
     windowSize: 10,
     enabled: true

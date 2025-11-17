@@ -163,7 +163,7 @@ export function Dashboard() {
                 <StatDisplay
                   icon={TrendingUp}
                   label="Total Volume"
-                  value={platformStats.totalVolume > 0n ? formatEther(platformStats.totalVolume) : "0"}
+                  value={platformStats.totalVolume && platformStats.totalVolume > 0n ? formatEther(platformStats.totalVolume) : "0"}
                   suffix="STT"
                   className="bg-secondary p-md border-3 border-primary rounded-brutalist shadow-brutalist"
                 />

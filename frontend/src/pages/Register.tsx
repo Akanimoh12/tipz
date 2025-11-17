@@ -238,7 +238,6 @@ export function Register() {
     writeContractAsync,
     isPending: isContractPending,
     data: txHash,
-    error: writeError,
     reset: resetWrite
   } = useWriteContract();
 
@@ -703,13 +702,12 @@ export function Register() {
                       disabled={isSubmitting || isContractPending || isConfirming}
                       isLoading={isSubmitting || isContractPending || isConfirming}
                     >
-                      {isContractPending 
-                        ? 'Confirm in Wallet...' 
-                        : isConfirming
-                        ? 'Confirming Transaction...'
-                        : isSubmitting 
-                        ? 'Preparing...' 
-                        : 'Create Profile'}
+                      {(() => {
+                        if (isContractPending) return 'Confirm in Wallet...';
+                        if (isConfirming) return 'Confirming Transaction...';
+                        if (isSubmitting) return 'Preparing...';
+                        return 'Create Profile';
+                      })()}
                     </Button>
                   </div>
                 </div>

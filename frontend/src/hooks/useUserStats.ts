@@ -53,7 +53,13 @@ export const useUserStats = (address?: Address) => {
 /**
  * Hook to get platform-wide statistics from TipzCore contract
  */
-export const usePlatformStats = () => {
+export const usePlatformStats = (): {
+  totalUsers: number;
+  totalTips: number;
+  totalVolume: bigint;
+  activeCreators: number;
+  isLoading: boolean;
+} => {
   // Get total users
   const { data: totalUsers, isLoading: usersLoading } = useReadContract({
     address: CONTRACT_ADDRESSES.tipzCore,
@@ -87,7 +93,7 @@ export const usePlatformStats = () => {
   return {
     totalUsers: totalUsers ? Number(totalUsers) : 0,
     totalTips: totalTips ? Number(totalTips) : 0,
-    totalVolume: totalVolume || 0n,
+    totalVolume: (totalVolume as bigint | undefined) || 0n,
     activeCreators: activeCreators ? Number(activeCreators) : 0,
     isLoading,
   };
