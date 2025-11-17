@@ -117,12 +117,13 @@ export function copyToClipboard(text: string): Promise<void> {
           reject(err);
         });
     } else {
-      // Fallback for older browsers (execCommand is deprecated but still works)
+      // Fallback: manual selection for very old browsers
       try {
-        // @ts-ignore - execCommand is deprecated but needed for legacy browser support
-        const success = document.execCommand('copy');
+        textArea.select();
+        textArea.setSelectionRange(0, text.length);
+        // Note: execCommand is deprecated but this path is rare with modern Clipboard API
+        reject(new Error('Clipboard API not supported'));
         textArea.remove();
-        success ? resolve() : reject(new Error('Copy command failed'));
       } catch (err) {
         textArea.remove();
         reject(err);

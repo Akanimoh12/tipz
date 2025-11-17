@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Share2, TrendingUp, Users, Zap, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Address } from 'viem';
+import { formatEther } from 'viem';
+import { useAccount } from 'wagmi';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/molecules/Card';
@@ -12,6 +13,8 @@ import { Skeleton } from '@/components/atoms/Skeleton';
 import { StatDisplay } from '@/components/molecules/StatDisplay';
 import { useModalStore } from '@/store/useModalStore';
 import { useLiveTickerStream } from '@/hooks/useLiveTickerStream';
+import { useProfile, useProfileByUsername } from '@/hooks/useProfile';
+import { useTipsReceived } from '@/hooks/useTip';
 import { xapiService } from '@/services/xapi.service';
 
 
@@ -39,59 +42,61 @@ function getCreditScoreTier(score: number): { tier: string; color: string } {
 
 export function Profile() {
   const { username } = useParams<{ username: string }>();
+  const { address: connectedAddress } = useAccount();
   const openTipModal = useModalStore((state) => state.openTipModal);
 
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const cleanUsername = username?.startsWith('@') ? username.slice(1) : username || '';
+  const isMyProfile = cleanUsername === 'me';
 
-  const cleanUsername = username?.startsWith('@') ? username.slice(1) : username;
+  // If @me, fetch profile by connected address, otherwise by username
+  const { profile: profileByAddress, isLoading: loadingByAddress } = useProfile(
+    isMyProfile ? connectedAddress : undefined
+  );
+  const { profile: profileByUsername, isLoading: loadingByUsername, isError } = useProfileByUsername(
+    !isMyProfile ? cleanUsername : ''
+  );
 
-  const { tips: recentTips, isConnected } = useLiveTickerStream({ 
+  // Use the appropriate profile
+  const contractProfile = isMyProfile ? profileByAddress : profileByUsername;
+  const isLoading = isMyProfile ? loadingByAddress : loadingByUsername;
+
+  // Fetch tips using the actual username from the profile
+  const actualUsername = contractProfile?.xUsername || cleanUsername;
+  const { tipsReceived: recentTipsRaw, isLoading: tipsLoading } = useTipsReceived(actualUsername, 10);
+  const { tips: streamTips, isConnected } = useLiveTickerStream({ 
     windowSize: 10,
     enabled: true
   });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!cleanUsername) {
-        setNotFound(true);
-        setIsLoading(false);
-        return;
-      }
+  // Combine recent tips from contract and live stream
+  const recentTips = [...streamTips, ...recentTipsRaw.map(tip => ({
+    id: Number(tip.id),
+    fromUsername: tip.fromUsername || 'Anonymous',
+    toUsername: tip.toUsername,
+    amount: tip.amount,
+    amountFormatted: formatEther(tip.amount),
+    message: tip.message,
+    timestamp: Number(tip.timestamp) * 1000, // Convert to milliseconds
+  }))].slice(0, 10);
 
-      setIsLoading(true);
+  // Transform contract profile to ProfileData
+  const profile: ProfileData | null = contractProfile ? {
+    username: contractProfile.xUsername,
+    name: contractProfile.xUsername,
+    walletAddress: contractProfile.walletAddress,
+    creditScore: contractProfile.creditScore,
+    totalTipsReceived: formatEther(contractProfile.totalTipsReceived),
+    totalTipsCount: Number(contractProfile.totalTipsCount),
+    followers: Number(contractProfile.xFollowers),
+    posts: Number(contractProfile.xPosts),
+    replies: Number(contractProfile.xReplies),
+    profileImageIpfs: contractProfile.profileImageIpfs,
+    createdAt: Number(contractProfile.createdAt) * 1000, // Convert to milliseconds
+    isActive: contractProfile.isActive,
+  } : null;
 
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const mockProfile: ProfileData = {
-          username: cleanUsername,
-          name: 'Demo Creator',
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          creditScore: 750,
-          totalTipsReceived: '45.5',
-          totalTipsCount: 120,
-          followers: 1250,
-          posts: 450,
-          replies: 320,
-          profileImageIpfs: '',
-          createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
-          isActive: true,
-        };
-
-        setProfile(mockProfile);
-        setNotFound(false);
-      } catch (error) {
-        console.error('Failed to fetch profile:', error);
-        setNotFound(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [cleanUsername]);
+  const notFound = !isLoading && (isError || !profile);
+  const needsConnection = isMyProfile && !connectedAddress;
 
   const handleTipClick = () => {
     if (!profile) return;
@@ -128,6 +133,31 @@ export function Profile() {
     });
   };
 
+  if (needsConnection) {
+    return (
+      <>
+        <Helmet>
+          <title>Connect Wallet - Tipz</title>
+        </Helmet>
+
+        <div className="min-h-screen bg-secondary py-2xl">
+          <div className="container mx-auto px-md max-w-2xl">
+            <Card variant="elevated" padding="lg" className="text-center p-xl">
+              <AlertCircle className="w-16 h-16 mx-auto mb-md text-primary/40" />
+              <h1 className="text-h2 font-bold mb-sm">Connect Your Wallet</h1>
+              <p className="text-body text-primary/70 mb-xl">
+                Please connect your wallet to view your profile.
+              </p>
+              <Link to="/dashboard">
+                <Button variant="brand">Go to Dashboard</Button>
+              </Link>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (notFound) {
     return (
       <>
@@ -141,12 +171,22 @@ export function Profile() {
               <AlertCircle className="w-16 h-16 mx-auto mb-md text-primary/40" />
               <h1 className="text-h2 font-bold mb-sm">Profile Not Found</h1>
               <p className="text-body text-primary/70 mb-xl">
-                The profile <span className="font-mono">@{cleanUsername}</span> doesn't exist or has
-                been deactivated.
+                {isMyProfile 
+                  ? "You haven't registered a profile yet."
+                  : `The profile @${cleanUsername} doesn't exist or has been deactivated.`
+                }
               </p>
-              <Link to="/">
-                <Button variant="brand">Back to Home</Button>
-              </Link>
+              <div className="flex gap-sm justify-center">
+                {isMyProfile ? (
+                  <Link to="/register">
+                    <Button variant="brand">Register Now</Button>
+                  </Link>
+                ) : (
+                  <Link to="/">
+                    <Button variant="brand">Back to Home</Button>
+                  </Link>
+                )}
+              </div>
             </Card>
           </div>
         </div>

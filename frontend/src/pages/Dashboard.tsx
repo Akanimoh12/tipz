@@ -116,7 +116,7 @@ export function Dashboard() {
                   icon={Wallet}
                   label="Available Balance"
                   value={formatEther(userStats.withdrawableBalance)}
-                  suffix="ETH"
+                  suffix="STT"
                   className="bg-secondary p-md border-3 border-primary rounded-brutalist shadow-brutalist"
                 />
 
@@ -124,7 +124,7 @@ export function Dashboard() {
                   icon={ArrowDownRight}
                   label="Tips Received"
                   value={formatEther(userStats.totalReceived)}
-                  suffix="ETH"
+                  suffix="STT"
                   className="bg-secondary p-md border-3 border-primary rounded-brutalist shadow-brutalist"
                 />
 
@@ -132,7 +132,7 @@ export function Dashboard() {
                   icon={ArrowUpRight}
                   label="Tips Sent"
                   value={formatEther(userStats.totalSent)}
-                  suffix="ETH"
+                  suffix="STT"
                   className="bg-secondary p-md border-3 border-primary rounded-brutalist shadow-brutalist"
                 />
 
@@ -164,7 +164,7 @@ export function Dashboard() {
                   icon={TrendingUp}
                   label="Total Volume"
                   value={platformStats.totalVolume > 0n ? formatEther(platformStats.totalVolume) : "0"}
-                  suffix="ETH"
+                  suffix="STT"
                   className="bg-secondary p-md border-3 border-primary rounded-brutalist shadow-brutalist"
                 />
 

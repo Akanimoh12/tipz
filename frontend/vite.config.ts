@@ -122,6 +122,15 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    hmr: {
+      clientPort: 443, // Required for ngrok
+    },
+    allowedHosts: [
+      'localhost',
+      '.ngrok-free.dev', // Allow all ngrok free domains
+      '.ngrok.io', // Allow ngrok.io domains (older format)
+      'denotative-charmedly-shalonda.ngrok-free.dev', // Your specific ngrok URL
+    ],
   },
   
   build: {

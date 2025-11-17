@@ -91,7 +91,7 @@ export const useSendTip = () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
 
       toast.success(
-        `Successfully tipped ${data.recipientAmount} ETH to @${data.toUsername}!`,
+        `Successfully tipped ${data.recipientAmount} STT to @${data.toUsername}!`,
         { duration: 5000 }
       );
     },
@@ -143,7 +143,7 @@ export const useWithdrawTips = () => {
       queryClient.invalidateQueries({ queryKey: ['withdrawableBalance'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
 
-      toast.success(`Successfully withdrew ${data.amount} ETH!`, { duration: 5000 });
+      toast.success(`Successfully withdrew ${data.amount} STT!`, { duration: 5000 });
     },
   });
 };

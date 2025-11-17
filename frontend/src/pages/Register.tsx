@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +13,7 @@ import { WalletButton } from '@/components/molecules/WalletButton';
 import { Avatar } from '@/components/atoms/Avatar';
 import { pinataService, type UploadProgress } from '@/services/pinata.service';
 import { xapiService, type XUserStats } from '@/services/xapi.service';
+import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI } from '@/services/contract.service';
 
 const STORAGE_KEY = 'tipz_registration_progress';
 
@@ -120,6 +121,16 @@ export function Register() {
   }, []);
 
   useEffect(() => {
+    // Check for OAuth errors first
+    const oauthError = xapiService.checkOAuthError(searchParams);
+    if (oauthError) {
+      toast.error(oauthError);
+      // Clean up URL
+      globalThis.history.replaceState({}, '', '/register');
+      return;
+    }
+
+    // Handle successful OAuth callback
     const code = searchParams.get('code');
     const state = searchParams.get('state');
 
@@ -153,7 +164,19 @@ export function Register() {
 
   const handleConnectX = async () => {
     try {
+      // Validate configuration first
+      const configValidation = xapiService.validateConfig();
+      if (!configValidation.valid) {
+        toast.error(configValidation.message || 'X API configuration error');
+        return;
+      }
+
       const authUrl = await xapiService.initiateOAuth();
+      
+      // Show loading toast
+      toast.loading('Redirecting to X for authorization...', { duration: 2000 });
+      
+      // Redirect to X OAuth
       globalThis.location.href = authUrl;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initiate X OAuth';
@@ -210,6 +233,40 @@ export function Register() {
     setCurrentStep(4);
   };
 
+  // Use wagmi's useWriteContract directly for better control
+  const { 
+    writeContractAsync,
+    isPending: isContractPending,
+    data: txHash,
+    error: writeError,
+    reset: resetWrite
+  } = useWriteContract();
+
+  // Wait for transaction confirmation
+  const { 
+    isLoading: isConfirming,
+    isSuccess: isConfirmed 
+  } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // Watch for transaction confirmation
+  useEffect(() => {
+    if (isConfirmed && isSubmitting) {
+      toast.dismiss('register-tx');
+      toast.success('Profile created on-chain successfully!');
+      
+      // Clean up and show success modal
+      setTimeout(() => {
+        localStorage.removeItem(STORAGE_KEY);
+        xapiService.clearUserData();
+        setShowSuccessModal(true);
+        setIsSubmitting(false);
+        resetWrite();
+      }, 500);
+    }
+  }, [isConfirmed, isSubmitting, resetWrite]);
+
   const onSubmit = async () => {
     if (!isConnected || !address) {
       toast.error('Please connect your wallet');
@@ -224,18 +281,40 @@ export function Register() {
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Show toast that transaction is being prepared
+      toast.loading('Preparing transaction...', { id: 'register-tx' });
+      
+      // Prepare contract arguments
+      const contractArgs = [
+        xData.username,
+        BigInt(xData.followers),
+        BigInt(xData.posts),
+        BigInt(xData.replies),
+        ipfsHash || ''
+      ];
 
-      localStorage.removeItem(STORAGE_KEY);
-      xapiService.clearUserData();
-
-      setShowSuccessModal(true);
-      toast.success('Profile created successfully!');
+      console.log('Submitting profile registration with args:', contractArgs);
+      
+      // Call the actual smart contract
+      const hash = await writeContractAsync({
+        address: CONTRACT_ADDRESSES.tipzProfile,
+        abi: TIPZ_PROFILE_ABI,
+        functionName: 'registerProfile',
+        args: contractArgs,
+      });
+      
+      toast.loading('Transaction submitted! Waiting for confirmation...', { id: 'register-tx' });
+      
+      console.log('Profile registration transaction hash:', hash);
+      
+      // Success handling is done in useEffect above when isConfirmed changes
     } catch (error) {
+      setIsSubmitting(false);
+      toast.dismiss('register-tx');
+      
       const message = error instanceof Error ? error.message : 'Failed to create profile';
       toast.error(message);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Profile registration error:', error);
     }
   };
 
@@ -610,17 +689,27 @@ export function Register() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-sm justify-center">
-                    <Button variant="ghost" onClick={() => setCurrentStep(3)}>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setCurrentStep(3)} 
+                      disabled={isSubmitting || isContractPending || isConfirming}
+                    >
                       Back
                     </Button>
                     <Button
                       variant="brand"
                       size="lg"
                       onClick={handleSubmit(onSubmit)}
-                      disabled={isSubmitting}
-                      isLoading={isSubmitting}
+                      disabled={isSubmitting || isContractPending || isConfirming}
+                      isLoading={isSubmitting || isContractPending || isConfirming}
                     >
-                      {isSubmitting ? 'Creating Profile...' : 'Create Profile'}
+                      {isContractPending 
+                        ? 'Confirm in Wallet...' 
+                        : isConfirming
+                        ? 'Confirming Transaction...'
+                        : isSubmitting 
+                        ? 'Preparing...' 
+                        : 'Create Profile'}
                     </Button>
                   </div>
                 </div>
@@ -639,9 +728,9 @@ export function Register() {
                 <CheckCircle2 className="w-10 h-10 text-green-600" />
               </div>
 
-              <h2 className="text-h2 font-bold mb-sm">Profile Created!</h2>
+              <h2 className="text-h2 font-bold mb-sm">Profile Created On-Chain!</h2>
               <p className="text-body text-primary/70 mb-xl">
-                Your Tipz profile is now live on Somnia Network. Share it with your supporters!
+                Your Tipz profile is now live on Somnia blockchain! Share it with your supporters and start receiving tips.
               </p>
 
               <div className="space-y-sm">

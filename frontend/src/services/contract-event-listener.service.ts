@@ -94,11 +94,8 @@ class ContractEventListenerService {
    */
   async start(): Promise<void> {
     if (this.isListeningState) {
-      console.log('📡 Contract event listeners already running');
       return;
     }
-
-    console.log('🚀 Starting contract event listeners...');
 
     try {
       // Start listening to all event types
@@ -112,11 +109,8 @@ class ContractEventListenerService {
       this.startQueueProcessor();
 
       this.isListeningState = true;
-      console.log('✅ Contract event listeners started successfully');
-      console.log(`   Listening to TipzCore: ${CONTRACT_ADDRESSES.tipzCore}`);
-      console.log(`   Listening to TipzProfile: ${CONTRACT_ADDRESSES.tipzProfile}`);
     } catch (error) {
-      console.error('❌ Failed to start contract event listeners:', error);
+      console.error('Failed to start event listeners:', error);
       throw error;
     }
   }
@@ -126,12 +120,10 @@ class ContractEventListenerService {
    */
   stop(): void {
     if (!this.isListeningState) {
-      console.log('📡 Contract event listeners not running');
       return;
     }
 
-    console.log('🛑 Stopping contract event listeners...');
-
+    // Silent stop - only log errors
     // Call all unwatch functions
     for (const unwatch of this.unwatchFunctions) {
       try {
@@ -150,7 +142,6 @@ class ContractEventListenerService {
     }
 
     this.isListeningState = false;
-    console.log('✅ Contract event listeners stopped');
   }
 
   /**

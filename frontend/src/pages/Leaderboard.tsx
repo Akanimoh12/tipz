@@ -26,6 +26,13 @@ const rankEmoji = (rank: number): string => {
   return `${rank}`;
 };
 
+// Get IPFS image URL
+const getIpfsUrl = (ipfsHash?: string): string | undefined => {
+  if (!ipfsHash) return undefined;
+  const gatewayUrl = import.meta.env.VITE_PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud';
+  return `${gatewayUrl}/ipfs/${ipfsHash}`;
+};
+
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -71,11 +78,12 @@ export function Leaderboard() {
     },
   });
 
-  // Format data for display
+  // Format data for display with IPFS images
   const formattedCreators = useMemo(() => 
     creators.map(creator => ({
       ...creator,
       totalAmount: formatEther(creator.totalAmount),
+      profileImage: creator.profileImage, // Will be undefined initially, could fetch separately
     })),
     [creators]
   );
@@ -84,6 +92,7 @@ export function Leaderboard() {
     tippers.map(tipper => ({
       ...tipper,
       totalAmount: formatEther(tipper.totalAmount),
+      profileImage: tipper.profileImage, // Will be undefined initially, could fetch separately
     })),
     [tippers]
   );

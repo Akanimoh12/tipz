@@ -8,12 +8,7 @@ import type {
   SomniaProfileUpdatedEvent,
   SomniaLeaderboardUpdate,
 } from '@/config/somnia-streams.config';
-import type {
-  TipEvent,
-  ProfileEvent,
-  LeaderboardUpdate,
-  StreamEvent,
-} from '@/config/streams.config';
+import type { TipEvent, ProfileEvent, LeaderboardUpdate } from '@/config/streams.config';
 
 /**
  * Converts Somnia SDK TipEvent to legacy TipEvent format
@@ -86,6 +81,26 @@ function convertLeaderboardUpdate(event: SomniaLeaderboardUpdate): LeaderboardUp
  * Adapter service that wraps somniaStreamsService with legacy interface
  */
 class StreamsAdapter {
+  private initPromise: Promise<void> | null = null;
+
+  /**
+   * Initialize the Somnia Streams SDK
+   * Safe to call multiple times - will only initialize once
+   */
+  async initialize(): Promise<void> {
+    this.initPromise ??= somniaStreamsService.initialize();
+    return this.initPromise;
+  }
+
+  /**
+   * Ensure SDK is initialized before any operation
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!somniaStreamsService.isConnected()) {
+      await this.initialize();
+    }
+  }
+
   /**
    * Subscribe to tip events with automatic type conversion
    */
@@ -93,6 +108,8 @@ class StreamsAdapter {
     callback: (event: TipEvent) => void,
     filter?: { username?: string }
   ): Promise<StreamSubscription> {
+    await this.ensureInitialized();
+
     // Convert callback to handle new type and transform to old type
     const adaptedCallback = (event: SomniaTipEvent) => {
       const legacyEvent = convertTipEvent(event);
@@ -112,6 +129,8 @@ class StreamsAdapter {
     username: string,
     callback: (event: ProfileEvent) => void
   ): Promise<StreamSubscription> {
+    await this.ensureInitialized();
+
     const adaptedCallback = (event: SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent) => {
       const legacyEvent = 'creditScore' in event
         ? convertProfileCreatedEvent(event)
@@ -128,6 +147,8 @@ class StreamsAdapter {
   async subscribeToLeaderboard(
     callback: (event: LeaderboardUpdate) => void
   ): Promise<StreamSubscription> {
+    await this.ensureInitialized();
+
     const adaptedCallback = (event: SomniaLeaderboardUpdate) => {
       const legacyEvent = convertLeaderboardUpdate(event);
       callback(legacyEvent);
@@ -176,17 +197,11 @@ class StreamsAdapter {
   isConnected(): boolean {
     return somniaStreamsService.getConnectionState() === 'connected';
   }
-
-  /**
-   * Initialize Somnia SDK (must be called before subscribing)
-   */
-  async initialize(): Promise<void> {
-    await somniaStreamsService.initialize();
-  }
 }
 
 // Export singleton instance matching old pattern
 export const streamsService = new StreamsAdapter();
 
-// Also export types for compatibility
-export type { StreamSubscription, StreamEvent, TipEvent, ProfileEvent, LeaderboardUpdate };
+// Re-export types for compatibility
+export type { TipEvent, ProfileEvent, LeaderboardUpdate } from '@/config/streams.config';
+export type { StreamSubscription } from './somnia-streams.service';

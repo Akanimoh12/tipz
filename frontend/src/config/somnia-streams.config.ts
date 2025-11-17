@@ -12,7 +12,7 @@ export const TIP_EVENT_SCHEMA = `
   string message,
   uint256 timestamp,
   bytes32 txHash
-`.replace(/\s+/g, ' ').trim();
+`.replaceAll(/\s+/g, ' ').trim();
 
 export const PROFILE_CREATED_SCHEMA = `
   address userAddress,
@@ -20,7 +20,7 @@ export const PROFILE_CREATED_SCHEMA = `
   uint256 creditScore,
   uint256 timestamp,
   bytes32 txHash
-`.replace(/\s+/g, ' ').trim();
+`.replaceAll(/\s+/g, ' ').trim();
 
 export const PROFILE_UPDATED_SCHEMA = `
   address userAddress,
@@ -28,13 +28,13 @@ export const PROFILE_UPDATED_SCHEMA = `
   string profileImageIpfs,
   uint256 timestamp,
   bytes32 txHash
-`.replace(/\s+/g, ' ').trim();
+`.replaceAll(/\s+/g, ' ').trim();
 
 export const LEADERBOARD_UPDATE_SCHEMA = `
   string updateType,
   bytes rankings,
   uint256 timestamp
-`.replace(/\s+/g, ' ').trim();
+`.replaceAll(/\s+/g, ' ').trim();
 
 export const STREAM_SCHEMA_NAMES = {
   TIP_EVENT: 'TIP_EVENT',

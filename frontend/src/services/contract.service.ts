@@ -10,22 +10,34 @@ export const CONTRACT_ADDRESSES = {
   tipzCore: (import.meta.env.VITE_TIPZ_CORE_ADDRESS as Address) || '0x',
 } as const;
 
+// Profile structure matching TipzProfile.sol contract
 export interface Profile {
-  userAddress: Address;
+  walletAddress: Address;
   xUsername: string;
-  xFollowers: number;
-  xPosts: number;
-  xReplies: number;
+  xFollowers: bigint;
+  xPosts: bigint;
+  xReplies: bigint;
   creditScore: number;
   profileImageIpfs: string;
-  isActive: boolean;
-  registrationTime: bigint;
   totalTipsReceived: bigint;
   totalTipsCount: bigint;
   withdrawableBalance: bigint;
   totalWithdrawn: bigint;
+  createdAt: bigint;
+  isActive: boolean;
 }
 
+// Leaderboard entry from TipzCore.sol
+export interface LeaderboardEntry {
+  username: string;
+  walletAddress: Address;
+  totalAmount: bigint;
+  count: bigint;
+  creditScore: bigint;
+  rank: bigint;
+}
+
+// Tip record structure from TipzCore.sol
 export interface TipRecord {
   id: bigint;
   fromAddress: Address;
@@ -36,9 +48,28 @@ export interface TipRecord {
   timestamp: bigint;
 }
 
+// Helper to transform contract profile to our interface
+export const transformProfile = (contractProfile: any): Profile => {
+  return {
+    walletAddress: contractProfile.walletAddress as Address,
+    xUsername: contractProfile.xUsername as string,
+    xFollowers: BigInt(contractProfile.xFollowers?.toString() || '0'),
+    xPosts: BigInt(contractProfile.xPosts?.toString() || '0'),
+    xReplies: BigInt(contractProfile.xReplies?.toString() || '0'),
+    creditScore: Number(contractProfile.creditScore || 0),
+    profileImageIpfs: contractProfile.profileImageIpfs as string,
+    totalTipsReceived: BigInt(contractProfile.totalTipsReceived?.toString() || '0'),
+    totalTipsCount: BigInt(contractProfile.totalTipsCount?.toString() || '0'),
+    withdrawableBalance: BigInt(contractProfile.withdrawableBalance?.toString() || '0'),
+    totalWithdrawn: BigInt(contractProfile.totalWithdrawn?.toString() || '0'),
+    createdAt: BigInt(contractProfile.createdAt?.toString() || '0'),
+    isActive: Boolean(contractProfile.isActive),
+  };
+};
+
 const ERROR_MESSAGES: Record<string, string> = {
   'RecipientNotRegistered': 'Recipient is not registered on Tipz',
-  'TipAmountTooLow': 'Tip amount is below minimum (0.001 ETH)',
+  'TipAmountTooLow': 'Tip amount is below minimum (0.001 STT)',
   'SelfTipNotAllowed': 'You cannot tip yourself',
   'WithdrawalAmountZero': 'Withdrawal amount must be greater than zero',
   'WithdrawalAmountExceedsBalance': 'Insufficient balance for withdrawal',

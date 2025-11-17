@@ -17,7 +17,7 @@
 // chosen approach. This will be addressed in Prompt 5 or when contract integration happens.
 
 import { SDK, SchemaEncoder } from '@somnia-chain/streams';
-import { createPublicClient, createWalletClient, http, custom, type PublicClient, type WalletClient, type Hex } from 'viem';
+import { createPublicClient, createWalletClient, http, custom, type PublicClient, type WalletClient, type Hex, type Address } from 'viem';
 import { DEFAULT_CHAIN } from '@/config/somnia.config';
 import {
   TIP_EVENT_SCHEMA,
@@ -60,6 +60,8 @@ class SomniaStreamsService {
   private readonly pollingIntervals: Map<string, ReturnType<typeof setInterval>> = new Map();
   private connectionState: ConnectionState = 'disconnected';
   private readonly eventCache: Set<string> = new Set();
+  private readonly publisherRegistry: Set<Address> = new Set();
+  private readonly PUBLISHER_STORAGE_KEY = 'somnia_stream_publishers';
 
   async initialize(): Promise<void> {
     if (this.sdk) {
@@ -76,7 +78,7 @@ class SomniaStreamsService {
         transport: http(),
       });
 
-      if (typeof globalThis.window !== 'undefined' && globalThis.window.ethereum) {
+      if (globalThis.window?.ethereum) {
         this.walletClient = createWalletClient({
           chain: DEFAULT_CHAIN,
           transport: custom(globalThis.window.ethereum),
@@ -90,6 +92,7 @@ class SomniaStreamsService {
 
       this.initializeEncoders();
       await this.computeSchemaIds();
+      this.loadPublishersFromStorage();
 
       this.connectionState = 'connected';
       console.log('✅ Somnia Streams SDK initialized successfully');
@@ -150,6 +153,47 @@ class SomniaStreamsService {
     return encoder;
   }
 
+  private loadPublishersFromStorage(): void {
+    try {
+      if (!globalThis.window?.localStorage) {
+        return;
+      }
+      
+      const stored = globalThis.localStorage.getItem(this.PUBLISHER_STORAGE_KEY);
+      if (stored) {
+        const publishers = JSON.parse(stored) as string[];
+        for (const addr of publishers) {
+          this.publisherRegistry.add(addr as Address);
+        }
+        console.log(`📖 Loaded ${publishers.length} known publishers from storage`);
+      }
+    } catch (error) {
+      console.error('Error loading publishers from storage:', error);
+    }
+  }
+
+  private savePublishersToStorage(): void {
+    try {
+      if (!globalThis.window?.localStorage) {
+        return;
+      }
+      
+      const publishers = Array.from(this.publisherRegistry);
+      globalThis.localStorage.setItem(this.PUBLISHER_STORAGE_KEY, JSON.stringify(publishers));
+    } catch (error) {
+      console.error('Error saving publishers to storage:', error);
+    }
+  }
+
+  private addPublisher(address: Address): void {
+    const sizeBefore = this.publisherRegistry.size;
+    this.publisherRegistry.add(address);
+    if (this.publisherRegistry.size > sizeBefore) {
+      console.log(`➕ Added new publisher: ${address}`);
+      this.savePublishersToStorage();
+    }
+  }
+
   private generateEventId(event: SomniaStreamEvent): string {
     if ('txHash' in event) {
       return event.txHash;
@@ -182,29 +226,30 @@ class SomniaStreamsService {
     }
   }
 
-  private async retryWithBackoff<T>(
-    operation: () => Promise<T>,
-    operationName: string
-  ): Promise<T | null> {
-    let lastError: Error | null = null;
-    
-    for (let attempt = 0; attempt < SOMNIA_STREAMS_CONFIG.MAX_RETRIES; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        
-        if (attempt < SOMNIA_STREAMS_CONFIG.MAX_RETRIES - 1) {
-          const delay = SOMNIA_STREAMS_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt);
-          console.warn(`⚠️  ${operationName} failed (attempt ${attempt + 1}/${SOMNIA_STREAMS_CONFIG.MAX_RETRIES}), retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-    
-    console.error(`❌ ${operationName} failed after ${SOMNIA_STREAMS_CONFIG.MAX_RETRIES} attempts:`, lastError);
-    return null;
-  }
+  // Retry with exponential backoff - reserved for future use
+  // private async retryWithBackoff<T>(
+  //   operation: () => Promise<T>,
+  //   operationName: string
+  // ): Promise<T | null> {
+  //   let lastError: Error | null = null;
+  //   
+  //   for (let attempt = 0; attempt < SOMNIA_STREAMS_CONFIG.MAX_RETRIES; attempt++) {
+  //     try {
+  //       return await operation();
+  //     } catch (error) {
+  //       lastError = error instanceof Error ? error : new Error(String(error));
+  //       
+  //       if (attempt < SOMNIA_STREAMS_CONFIG.MAX_RETRIES - 1) {
+  //         const delay = SOMNIA_STREAMS_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt);
+  //         console.warn(`⚠️  ${operationName} failed (attempt ${attempt + 1}/${SOMNIA_STREAMS_CONFIG.MAX_RETRIES}), retrying in ${delay}ms...`);
+  //         await new Promise(resolve => setTimeout(resolve, delay));
+  //       }
+  //     }
+  //   }
+  //   
+  //   console.error(`❌ ${operationName} failed after ${SOMNIA_STREAMS_CONFIG.MAX_RETRIES} attempts:`, lastError);
+  //   return null;
+  // }
 
   getConnectionState(): ConnectionState {
     return this.connectionState;
@@ -267,12 +312,11 @@ class SomniaStreamsService {
       }
 
       try {
-        const oldestTimestamp = tipSubscriptions.reduce(
-          (min, sub) => sub.lastProcessedTimestamp < min ? sub.lastProcessedTimestamp : min,
-          tipSubscriptions[0].lastProcessedTimestamp
+        const oldestTimestamp = Math.min(
+          ...tipSubscriptions.map(sub => Number(sub.lastProcessedTimestamp))
         );
 
-        const events = await this.readTipEvents(oldestTimestamp);
+        const events = await this.readTipEvents(BigInt(oldestTimestamp));
         if (events.length > 0) {
           this.processAndNotifyTipSubscribers(events);
         }
@@ -284,12 +328,109 @@ class SomniaStreamsService {
     this.pollingIntervals.set(STREAM_SCHEMA_NAMES.TIP_EVENT, intervalId);
   }
 
-  private async readTipEvents(_afterTimestamp: bigint): Promise<SomniaTipEvent[]> {
-    if (!this.sdk) {
+  private async readTipEvents(afterTimestamp: bigint): Promise<SomniaTipEvent[]> {
+    if (!this.sdk || this.publisherRegistry.size === 0) {
       return [];
     }
-    // TODO: Implement reading from Data Streams after contract event integration
-    return [];
+
+    try {
+      const allEvents: SomniaTipEvent[] = [];
+      const schemaId = this.getSchemaId(STREAM_SCHEMA_NAMES.TIP_EVENT);
+      const encoder = this.getEncoder(STREAM_SCHEMA_NAMES.TIP_EVENT);
+
+      // Query all known publishers in parallel
+      const publisherQueries = Array.from(this.publisherRegistry).map(async (publisher) => {
+        try {
+          const data = await this.sdk!.streams.getAllPublisherDataForSchema(schemaId, publisher);
+          
+          if (data instanceof Error) {
+            console.warn(`Failed to read from publisher ${publisher}:`, data.message);
+            return [];
+          }
+
+          // SDK returns SchemaDecodedItem[][] for public schemas or Hex[] for private schemas
+          // Since we're using public schemas, data is already decoded
+          const events: SomniaTipEvent[] = [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            // Check if it's Hex[] (private schema) or SchemaDecodedItem[][] (public schema)
+            const firstItem = data[0];
+            
+            if (typeof firstItem === 'string') {
+              // Hex[] - need to manually decode
+              for (const hexData of data as Hex[]) {
+                try {
+                  const decoded = encoder.decodeData(hexData);
+                  
+                  const event: SomniaTipEvent = {
+                    tipId: decoded[0].value as unknown as bigint,
+                    fromAddress: decoded[1].value as unknown as Address,
+                    toAddress: decoded[2].value as unknown as Address,
+                    fromUsername: decoded[3].value as unknown as string,
+                    toUsername: decoded[4].value as unknown as string,
+                    amount: decoded[5].value as unknown as bigint,
+                    platformFee: decoded[6].value as unknown as bigint,
+                    recipientAmount: decoded[7].value as unknown as bigint,
+                    message: decoded[8].value as unknown as string,
+                    timestamp: decoded[9].value as unknown as bigint,
+                    txHash: decoded[10].value as unknown as Hex,
+                  };
+
+                  if (event.timestamp > afterTimestamp) {
+                    events.push(event);
+                  }
+                } catch (decodeError) {
+                  console.warn('Failed to decode tip event:', decodeError);
+                }
+              }
+            } else {
+              // SchemaDecodedItem[][] - already decoded
+              for (const decodedItems of data as any[][]) {
+                try {
+                  const event: SomniaTipEvent = {
+                    tipId: decodedItems[0].value as unknown as bigint,
+                    fromAddress: decodedItems[1].value as unknown as Address,
+                    toAddress: decodedItems[2].value as unknown as Address,
+                    fromUsername: decodedItems[3].value as unknown as string,
+                    toUsername: decodedItems[4].value as unknown as string,
+                    amount: decodedItems[5].value as unknown as bigint,
+                    platformFee: decodedItems[6].value as unknown as bigint,
+                    recipientAmount: decodedItems[7].value as unknown as bigint,
+                    message: decodedItems[8].value as unknown as string,
+                    timestamp: decodedItems[9].value as unknown as bigint,
+                    txHash: decodedItems[10].value as unknown as Hex,
+                  };
+
+                  if (event.timestamp > afterTimestamp) {
+                    events.push(event);
+                  }
+                } catch (decodeError) {
+                  console.warn('Failed to decode tip event:', decodeError);
+                }
+              }
+            }
+          }
+
+          return events;
+        } catch (error) {
+          console.warn(`Error querying publisher ${publisher}:`, error);
+          return [];
+        }
+      });
+
+      const results = await Promise.all(publisherQueries);
+      
+      // Flatten and aggregate results from all publishers
+      for (const events of results) {
+        allEvents.push(...events);
+      }
+
+      // Sort by timestamp (newest first)
+      return allEvents.sort((a, b) => Number(b.timestamp - a.timestamp));
+    } catch (error) {
+      console.error('Error reading tip events:', error);
+      return [];
+    }
   }
 
   private processAndNotifyTipSubscribers(events: SomniaTipEvent[]): void {
@@ -363,16 +504,15 @@ class SomniaStreamsService {
       }
 
       try {
-        const oldestTimestamp = profileSubscriptions.reduce(
-          (min, sub) => sub.lastProcessedTimestamp < min ? sub.lastProcessedTimestamp : min,
-          profileSubscriptions[0].lastProcessedTimestamp
+        const oldestTimestamp = Math.min(
+          ...profileSubscriptions.map(sub => Number(sub.lastProcessedTimestamp))
         );
 
         const usernameFilters = profileSubscriptions
           .map(sub => sub.filter?.username as string | undefined)
           .filter((u): u is string => !!u);
 
-        const events = await this.readProfileEvents(oldestTimestamp, usernameFilters);
+        const events = await this.readProfileEvents(BigInt(oldestTimestamp), usernameFilters);
         if (events.length > 0) {
           this.processAndNotifyProfileSubscribers(events);
         }
@@ -385,14 +525,132 @@ class SomniaStreamsService {
   }
 
   private async readProfileEvents(
-    _afterTimestamp: bigint,
-    _usernameFilters: string[]
+    afterTimestamp: bigint,
+    usernameFilters: string[]
   ): Promise<(SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent)[]> {
-    if (!this.sdk) {
+    if (!this.sdk || this.publisherRegistry.size === 0) {
       return [];
     }
-    // TODO: Implement reading from Data Streams after contract event integration
-    return [];
+
+    try {
+      const allEvents: (SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent)[] = [];
+      
+      // Read both profile created and updated events
+      const schemaIds = [
+        { id: this.getSchemaId(STREAM_SCHEMA_NAMES.PROFILE_CREATED), type: 'created' as const },
+        { id: this.getSchemaId(STREAM_SCHEMA_NAMES.PROFILE_UPDATED), type: 'updated' as const },
+      ];
+
+      for (const { id: schemaId, type } of schemaIds) {
+        const encoder = this.getEncoder(
+          type === 'created' ? STREAM_SCHEMA_NAMES.PROFILE_CREATED : STREAM_SCHEMA_NAMES.PROFILE_UPDATED
+        );
+
+        // Query all known publishers in parallel
+        const publisherQueries = Array.from(this.publisherRegistry).map(async (publisher) => {
+          try {
+            const data = await this.sdk!.streams.getAllPublisherDataForSchema(schemaId, publisher);
+            
+            if (data instanceof Error) {
+              console.warn(`Failed to read profile ${type} from publisher ${publisher}:`, data.message);
+              return [];
+            }
+
+            const events: (SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent)[] = [];
+            
+            if (Array.isArray(data) && data.length > 0) {
+              const firstItem = data[0];
+              
+              if (typeof firstItem === 'string') {
+                // Hex[] - need to manually decode
+                for (const hexData of data as Hex[]) {
+                  try {
+                    const decoded = encoder.decodeData(hexData);
+                    
+                    let event: SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent;
+                    
+                    if (type === 'created') {
+                      event = {
+                        userAddress: decoded[0].value as unknown as Address,
+                        username: decoded[1].value as unknown as string,
+                        creditScore: decoded[2].value as unknown as bigint,
+                        timestamp: decoded[3].value as unknown as bigint,
+                        txHash: decoded[4].value as unknown as Hex,
+                      };
+                    } else {
+                      event = {
+                        userAddress: decoded[0].value as unknown as Address,
+                        username: decoded[1].value as unknown as string,
+                        profileImageIpfs: decoded[2].value as unknown as string,
+                        timestamp: decoded[3].value as unknown as bigint,
+                        txHash: decoded[4].value as unknown as Hex,
+                      };
+                    }
+
+                    if (event.timestamp > afterTimestamp && 
+                        (usernameFilters.length === 0 || usernameFilters.includes(event.username))) {
+                      events.push(event);
+                    }
+                  } catch (decodeError) {
+                    console.warn(`Failed to decode profile ${type} event:`, decodeError);
+                  }
+                }
+              } else {
+                // SchemaDecodedItem[][] - already decoded
+                for (const decodedItems of data as any[][]) {
+                  try {
+                    let event: SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent;
+                    
+                    if (type === 'created') {
+                      event = {
+                        userAddress: decodedItems[0].value as unknown as Address,
+                        username: decodedItems[1].value as unknown as string,
+                        creditScore: decodedItems[2].value as unknown as bigint,
+                        timestamp: decodedItems[3].value as unknown as bigint,
+                        txHash: decodedItems[4].value as unknown as Hex,
+                      };
+                    } else {
+                      event = {
+                        userAddress: decodedItems[0].value as unknown as Address,
+                        username: decodedItems[1].value as unknown as string,
+                        profileImageIpfs: decodedItems[2].value as unknown as string,
+                        timestamp: decodedItems[3].value as unknown as bigint,
+                        txHash: decodedItems[4].value as unknown as Hex,
+                      };
+                    }
+
+                    if (event.timestamp > afterTimestamp && 
+                        (usernameFilters.length === 0 || usernameFilters.includes(event.username))) {
+                      events.push(event);
+                    }
+                  } catch (decodeError) {
+                    console.warn(`Failed to decode profile ${type} event:`, decodeError);
+                  }
+                }
+              }
+            }
+
+            return events;
+          } catch (error) {
+            console.warn(`Error querying publisher ${publisher} for profile ${type}:`, error);
+            return [];
+          }
+        });
+
+        const results = await Promise.all(publisherQueries);
+        
+        // Flatten and aggregate results from all publishers
+        for (const events of results) {
+          allEvents.push(...events);
+        }
+      }
+
+      // Sort by timestamp (newest first)
+      return allEvents.sort((a, b) => Number(b.timestamp - a.timestamp));
+    } catch (error) {
+      console.error('Error reading profile events:', error);
+      return [];
+    }
   }
 
   private processAndNotifyProfileSubscribers(
@@ -468,12 +726,11 @@ class SomniaStreamsService {
       }
 
       try {
-        const oldestTimestamp = leaderboardSubscriptions.reduce(
-          (min, sub) => sub.lastProcessedTimestamp < min ? sub.lastProcessedTimestamp : min,
-          leaderboardSubscriptions[0].lastProcessedTimestamp
+        const oldestTimestamp = Math.min(
+          ...leaderboardSubscriptions.map(sub => Number(sub.lastProcessedTimestamp))
         );
 
-        const events = await this.readLeaderboardEvents(oldestTimestamp);
+        const events = await this.readLeaderboardEvents(BigInt(oldestTimestamp));
         if (events.length > 0) {
           this.processAndNotifyLeaderboardSubscribers(events);
         }
@@ -485,12 +742,90 @@ class SomniaStreamsService {
     this.pollingIntervals.set(STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE, intervalId);
   }
 
-  private async readLeaderboardEvents(_afterTimestamp: bigint): Promise<SomniaLeaderboardUpdate[]> {
-    if (!this.sdk) {
+  private async readLeaderboardEvents(afterTimestamp: bigint): Promise<SomniaLeaderboardUpdate[]> {
+    if (!this.sdk || this.publisherRegistry.size === 0) {
       return [];
     }
-    // TODO: Implement reading from Data Streams after contract event integration
-    return [];
+
+    try {
+      const allEvents: SomniaLeaderboardUpdate[] = [];
+      const schemaId = this.getSchemaId(STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE);
+      const encoder = this.getEncoder(STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE);
+
+      // Query all known publishers in parallel
+      const publisherQueries = Array.from(this.publisherRegistry).map(async (publisher) => {
+        try {
+          const data = await this.sdk!.streams.getAllPublisherDataForSchema(schemaId, publisher);
+          
+          if (data instanceof Error) {
+            console.warn(`Failed to read leaderboard from publisher ${publisher}:`, data.message);
+            return [];
+          }
+
+          const events: SomniaLeaderboardUpdate[] = [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            const firstItem = data[0];
+            
+            if (typeof firstItem === 'string') {
+              // Hex[] - need to manually decode
+              for (const hexData of data as Hex[]) {
+                try {
+                  const decoded = encoder.decodeData(hexData);
+                  
+                  const event: SomniaLeaderboardUpdate = {
+                    updateType: decoded[0].value as unknown as 'top_creators' | 'top_tippers',
+                    rankings: new Uint8Array(decoded[1].value as unknown as number[]),
+                    timestamp: decoded[2].value as unknown as bigint,
+                  };
+
+                  if (event.timestamp > afterTimestamp) {
+                    events.push(event);
+                  }
+                } catch (decodeError) {
+                  console.warn('Failed to decode leaderboard event:', decodeError);
+                }
+              }
+            } else {
+              // SchemaDecodedItem[][] - already decoded
+              for (const decodedItems of data as any[][]) {
+                try {
+                  const event: SomniaLeaderboardUpdate = {
+                    updateType: decodedItems[0].value as unknown as 'top_creators' | 'top_tippers',
+                    rankings: new Uint8Array(decodedItems[1].value as unknown as number[]),
+                    timestamp: decodedItems[2].value as unknown as bigint,
+                  };
+
+                  if (event.timestamp > afterTimestamp) {
+                    events.push(event);
+                  }
+                } catch (decodeError) {
+                  console.warn('Failed to decode leaderboard event:', decodeError);
+                }
+              }
+            }
+          }
+
+          return events;
+        } catch (error) {
+          console.warn(`Error querying publisher ${publisher} for leaderboard:`, error);
+          return [];
+        }
+      });
+
+      const results = await Promise.all(publisherQueries);
+      
+      // Flatten and aggregate results from all publishers
+      for (const events of results) {
+        allEvents.push(...events);
+      }
+
+      // Sort by timestamp (newest first)
+      return allEvents.sort((a, b) => Number(b.timestamp - a.timestamp));
+    } catch (error) {
+      console.error('Error reading leaderboard events:', error);
+      return [];
+    }
   }
 
   private processAndNotifyLeaderboardSubscribers(events: SomniaLeaderboardUpdate[]): void {
@@ -636,6 +971,10 @@ class SomniaStreamsService {
         return result;
       }
 
+      // Track publisher address for future reads
+      const [account] = await this.walletClient.getAddresses();
+      this.addPublisher(account);
+
       console.log(`📤 Published tip event: ${event.tipId}`);
       return result;
     } catch (error) {
@@ -679,6 +1018,10 @@ class SomniaStreamsService {
         console.error('Failed to publish profile created event:', result);
         return result;
       }
+
+      // Track publisher address for future reads
+      const [account] = await this.walletClient.getAddresses();
+      this.addPublisher(account);
 
       console.log(`📤 Published profile created: ${event.username}`);
       return result;
@@ -724,6 +1067,10 @@ class SomniaStreamsService {
         return result;
       }
 
+      // Track publisher address for future reads
+      const [account] = await this.walletClient.getAddresses();
+      this.addPublisher(account);
+
       console.log(`📤 Published profile updated: ${event.username}`);
       return result;
     } catch (error) {
@@ -764,6 +1111,10 @@ class SomniaStreamsService {
         console.error('Failed to publish leaderboard update:', result);
         return result;
       }
+
+      // Track publisher address for future reads
+      const [account] = await this.walletClient.getAddresses();
+      this.addPublisher(account);
 
       console.log(`📤 Published leaderboard update: ${event.updateType}`);
       return result;

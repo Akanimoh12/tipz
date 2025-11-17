@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { streamsService } from '../services/streams-adapter.service';
-import type { StreamEvent, StreamSubscription } from '../services/streams-adapter.service';
+import type { StreamSubscription } from '../services/streams-adapter.service';
+import type { StreamEvent } from '../config/streams.config';
 
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 

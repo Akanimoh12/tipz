@@ -1,7 +1,8 @@
-import { useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { type Address } from 'viem';
 import { useProfile } from './useProfile';
-import { useWithdrawableBalance, useTipHistory, useTipsSent } from './useTip';
+import { useWithdrawableBalance, useTipsSent } from './useTip';
+import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI } from '../services/contract.service';
 
 /**
  * Hook to get comprehensive user statistics
@@ -12,28 +13,27 @@ export const useUserStats = (address?: Address) => {
 
   const { profile, isLoading: profileLoading } = useProfile(targetAddress);
   const { balance, isLoading: balanceLoading } = useWithdrawableBalance(targetAddress);
-  const { history, isLoading: historyLoading } = useTipHistory(targetAddress, 0);
   const { tipsSent, isLoading: sentLoading } = useTipsSent(targetAddress, 0);
 
-  const isLoading = profileLoading || balanceLoading || historyLoading || sentLoading;
+  const isLoading = profileLoading || balanceLoading || sentLoading;
 
-  // Calculate received tips
-  const tipsReceived = history.filter((tip) => tip.toUsername === profile?.xUsername);
-  const totalReceived = tipsReceived.reduce((sum, tip) => sum + tip.amount, 0n);
+  // Get stats from profile (already loaded from contract)
+  const totalReceived = profile?.totalTipsReceived || 0n;
+  const tipsReceivedCount = profile?.totalTipsCount || 0n;
 
   // Calculate sent tips
   const totalSent = tipsSent.reduce((sum, tip) => sum + tip.amount, 0n);
 
   // Total tips count (sent + received)
-  const tipsCount = history.length;
+  const tipsCount = tipsSent.length + Number(tipsReceivedCount);
 
   return {
     // Balance
     withdrawableBalance: balance,
     
-    // Received stats
+    // Received stats (from profile)
     totalReceived,
-    tipsReceivedCount: tipsReceived.length,
+    tipsReceivedCount: Number(tipsReceivedCount),
     
     // Sent stats
     totalSent,
@@ -51,16 +51,44 @@ export const useUserStats = (address?: Address) => {
 };
 
 /**
- * Hook to get platform-wide statistics
+ * Hook to get platform-wide statistics from TipzCore contract
  */
 export const usePlatformStats = () => {
-  // TODO: Add platform-wide contract reads when available
-  // For now, return placeholder structure
+  // Get total users
+  const { data: totalUsers, isLoading: usersLoading } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getTotalUsers',
+  });
+
+  // Get total volume
+  const { data: totalVolume, isLoading: volumeLoading } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getTotalVolume',
+  });
+
+  // Get active creators
+  const { data: activeCreators, isLoading: creatorsLoading } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getActiveCreators',
+  });
+
+  // Get total tip count
+  const { data: totalTips, isLoading: tipsLoading } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getTotalTipCount',
+  });
+
+  const isLoading = usersLoading || volumeLoading || creatorsLoading || tipsLoading;
+
   return {
-    totalUsers: 0,
-    totalTips: 0,
-    totalVolume: 0n,
-    activeCreators: 0,
-    isLoading: false,
+    totalUsers: totalUsers ? Number(totalUsers) : 0,
+    totalTips: totalTips ? Number(totalTips) : 0,
+    totalVolume: totalVolume || 0n,
+    activeCreators: activeCreators ? Number(activeCreators) : 0,
+    isLoading,
   };
 };

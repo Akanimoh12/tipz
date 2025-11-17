@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { type Address } from 'viem';
 import { useProfileRead, useProfileWrite } from './useContract';
-import type { Profile } from '../services/contract.service';
+import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI, transformProfile, type Profile } from '../services/contract.service';
 
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -11,12 +11,23 @@ export const useProfile = (address?: Address) => {
   const targetAddress = address || connectedAddress;
 
   const { 
-    data: profile, 
+    data: rawProfile, 
     isLoading, 
     isError, 
     error, 
     refetch 
-  } = useProfileRead<Profile>('getProfile', targetAddress ? [targetAddress] : undefined);
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzProfile,
+    abi: TIPZ_PROFILE_ABI,
+    functionName: 'getProfile',
+    args: targetAddress ? [targetAddress] : undefined,
+    query: {
+      enabled: !!targetAddress,
+      staleTime: PROFILE_STALE_TIME,
+    },
+  });
+
+  const profile = rawProfile ? transformProfile(rawProfile) : undefined;
 
   return {
     profile,
@@ -29,15 +40,32 @@ export const useProfile = (address?: Address) => {
 };
 
 export const useProfileByUsername = (username: string) => {
-  return useQuery({
-    queryKey: ['profile', 'username', username],
-    queryFn: async () => {
-      const { data } = useProfileRead<Profile>('getProfileByUsername', [username]);
-      return data;
+  const { 
+    data: rawProfile, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch 
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzProfile,
+    abi: TIPZ_PROFILE_ABI,
+    functionName: 'getProfileByUsername',
+    args: username ? [username] : undefined,
+    query: {
+      enabled: !!username,
+      staleTime: PROFILE_STALE_TIME,
     },
-    staleTime: PROFILE_STALE_TIME,
-    enabled: !!username,
   });
+
+  const profile = rawProfile ? transformProfile(rawProfile) : undefined;
+
+  return {
+    profile,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  };
 };
 
 export const useIsRegistered = (address?: Address) => {
@@ -47,7 +75,15 @@ export const useIsRegistered = (address?: Address) => {
   const { 
     data: isRegistered, 
     isLoading 
-  } = useProfileRead<boolean>('isRegistered', targetAddress ? [targetAddress] : undefined);
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzProfile,
+    abi: TIPZ_PROFILE_ABI,
+    functionName: 'isRegistered',
+    args: targetAddress ? [targetAddress] : undefined,
+    query: {
+      enabled: !!targetAddress,
+    },
+  });
 
   return {
     isRegistered: isRegistered || false,

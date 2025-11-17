@@ -1,5 +1,6 @@
-import { useTipzCoreRead } from './useContract';
+import { useReadContract } from 'wagmi';
 import { type Address } from 'viem';
+import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI, type LeaderboardEntry as ContractLeaderboardEntry } from '../services/contract.service';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -11,24 +12,40 @@ export interface LeaderboardEntry {
   walletAddress: Address;
 }
 
+// Transform contract leaderboard entry to our interface
+const transformLeaderboardEntry = (entry: ContractLeaderboardEntry, index: number): LeaderboardEntry => {
+  return {
+    rank: Number(entry.rank || BigInt(index + 1)),
+    username: entry.username,
+    profileImage: undefined, // Will need to fetch separately if needed
+    totalAmount: entry.totalAmount,
+    count: Number(entry.count),
+    creditScore: Number(entry.creditScore),
+    walletAddress: entry.walletAddress,
+  };
+};
+
 /**
  * Hook to get top creators by tips received
  */
 export const useTopCreators = (limit: number = 50) => {
-  // TODO: Add actual contract call when getTopCreators is implemented
-  // For now, this is a placeholder that will need to be implemented in the contract
-  
   const { 
-    data: creators, 
+    data: rawCreators, 
     isLoading, 
     refetch 
-  } = useTipzCoreRead<LeaderboardEntry[]>(
-    'getTopCreators', 
-    [limit]
-  );
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getTopCreators',
+    args: [BigInt(limit)],
+  });
+
+  const creators = rawCreators 
+    ? (rawCreators as ContractLeaderboardEntry[]).map((entry, index) => transformLeaderboardEntry(entry, index))
+    : [];
 
   return {
-    creators: creators || [],
+    creators,
     isLoading,
     refetch,
   };
@@ -38,20 +55,23 @@ export const useTopCreators = (limit: number = 50) => {
  * Hook to get top tippers by tips sent
  */
 export const useTopTippers = (limit: number = 50) => {
-  // TODO: Add actual contract call when getTopTippers is implemented
-  // For now, this is a placeholder that will need to be implemented in the contract
-  
   const { 
-    data: tippers, 
+    data: rawTippers, 
     isLoading, 
     refetch 
-  } = useTipzCoreRead<LeaderboardEntry[]>(
-    'getTopTippers', 
-    [limit]
-  );
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getTopTippers',
+    args: [BigInt(limit)],
+  });
+
+  const tippers = rawTippers 
+    ? (rawTippers as ContractLeaderboardEntry[]).map((entry, index) => transformLeaderboardEntry(entry, index))
+    : [];
 
   return {
-    tippers: tippers || [],
+    tippers,
     isLoading,
     refetch,
   };
@@ -61,17 +81,21 @@ export const useTopTippers = (limit: number = 50) => {
  * Hook to get user's leaderboard position
  */
 export const useUserRank = (username: string) => {
-  // TODO: Implement contract call to get user's rank
   const { 
     data: rank, 
     isLoading 
-  } = useTipzCoreRead<number>(
-    'getUserRank', 
-    username ? [username] : undefined
-  );
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzCore,
+    abi: TIPZ_CORE_ABI,
+    functionName: 'getUserRank',
+    args: username ? [username] : undefined,
+    query: {
+      enabled: !!username,
+    },
+  });
 
   return {
-    rank: rank || 0,
+    rank: rank ? Number(rank) : 0,
     isLoading,
   };
 };

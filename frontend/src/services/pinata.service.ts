@@ -4,7 +4,7 @@ const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 const PINATA_GATEWAY_URL = import.meta.env.VITE_PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const TARGET_WIDTH = 400;
 const TARGET_HEIGHT = 400;
 
@@ -21,7 +21,7 @@ interface UploadResult {
 }
 
 class PinataService {
-  private sdk: PinataSDK | null = null;
+  private readonly sdk: PinataSDK | null = null;
 
   constructor() {
     if (PINATA_JWT) {
@@ -37,7 +37,7 @@ class PinataService {
       return { valid: false, error: 'No file provided' };
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!ALLOWED_TYPES.has(file.type)) {
       return {
         valid: false,
         error: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.',
@@ -72,16 +72,12 @@ class PinataService {
           let width = img.width;
           let height = img.height;
 
-          if (width > height) {
-            if (width > TARGET_WIDTH) {
-              height = (height * TARGET_WIDTH) / width;
-              width = TARGET_WIDTH;
-            }
-          } else {
-            if (height > TARGET_HEIGHT) {
-              width = (width * TARGET_HEIGHT) / height;
-              height = TARGET_HEIGHT;
-            }
+          if (width > height && width > TARGET_WIDTH) {
+            height = (height * TARGET_WIDTH) / width;
+            width = TARGET_WIDTH;
+          } else if (height >= width && height > TARGET_HEIGHT) {
+            width = (width * TARGET_HEIGHT) / height;
+            height = TARGET_HEIGHT;
           }
 
           canvas.width = width;

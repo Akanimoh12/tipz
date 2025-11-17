@@ -16,7 +16,7 @@ const tipFormSchema = z.object({
     .string()
     .min(1, 'Amount is required')
     .refine((val) => !Number.isNaN(Number.parseFloat(val)) && Number.parseFloat(val) > 0, 'Amount must be greater than 0')
-    .refine((val) => Number.parseFloat(val) >= 0.001, 'Minimum tip is 0.001 ETH'),
+    .refine((val) => Number.parseFloat(val) >= 0.001, 'Minimum tip is 0.001 STT'),
   message: z.string().max(280, 'Message must be less than 280 characters').optional(),
 });
 

@@ -91,6 +91,7 @@ export function useContractEventListener(
 
   const isStartingRef = useRef(false);
   const metricsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasAutoStartedRef = useRef(false);
 
   /**
    * Start event listeners
@@ -114,23 +115,16 @@ export function useContractEventListener(
       setIsInitializing(true);
       setError(null);
 
-      if (enableLogging) {
-        console.log('🚀 Starting contract event listeners...');
-      }
-
       await contractEventListenerService.start();
 
       setIsListening(true);
       setIsInitializing(false);
-
-      if (enableLogging) {
-        console.log('✅ Event listeners started');
-      }
+      hasAutoStartedRef.current = true;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start event listeners');
       setError(error);
       setIsInitializing(false);
-      console.error('❌ Failed to start event listeners:', error);
+      console.error('Failed to start event listeners:', error);
       throw error;
     } finally {
       isStartingRef.current = false;
@@ -141,17 +135,10 @@ export function useContractEventListener(
    * Stop event listeners
    */
   const stop = useCallback(() => {
-    if (enableLogging) {
-      console.log('🛑 Stopping contract event listeners...');
-    }
-
     contractEventListenerService.stop();
     setIsListening(false);
-
-    if (enableLogging) {
-      console.log('✅ Event listeners stopped');
-    }
-  }, [enableLogging]);
+    hasAutoStartedRef.current = false;
+  }, []);
 
   /**
    * Clear event queue
@@ -169,18 +156,32 @@ export function useContractEventListener(
   }, []);
 
   /**
-   * Update metrics periodically
+   * Update metrics periodically - only when they actually change
    */
   useEffect(() => {
     if (!isListening) {
       return;
     }
 
-    // Update metrics every 2 seconds
+    // Update metrics every 5 seconds, but only if they changed
     metricsIntervalRef.current = setInterval(() => {
       const currentMetrics = contractEventListenerService.getMetrics();
-      setMetrics(currentMetrics);
-    }, 2000);
+      
+      // Only update state if metrics actually changed
+      setMetrics((prevMetrics) => {
+        const hasChanged = 
+          currentMetrics.tipsDetected !== prevMetrics.tipsDetected ||
+          currentMetrics.tipsPublished !== prevMetrics.tipsPublished ||
+          currentMetrics.profilesCreatedDetected !== prevMetrics.profilesCreatedDetected ||
+          currentMetrics.profilesCreatedPublished !== prevMetrics.profilesCreatedPublished ||
+          currentMetrics.profilesUpdatedDetected !== prevMetrics.profilesUpdatedDetected ||
+          currentMetrics.profilesUpdatedPublished !== prevMetrics.profilesUpdatedPublished ||
+          currentMetrics.publishErrors !== prevMetrics.publishErrors ||
+          currentMetrics.queueSize !== prevMetrics.queueSize;
+
+        return hasChanged ? currentMetrics : prevMetrics;
+      });
+    }, 5000); // 5 seconds - less aggressive polling
 
     return () => {
       if (metricsIntervalRef.current) {
@@ -188,42 +189,34 @@ export function useContractEventListener(
         metricsIntervalRef.current = null;
       }
     };
-  }, [isListening]);
+  }, [isListening]); // Only recreate when listening state changes
 
   /**
    * Auto-start listeners when wallet connects
    */
   useEffect(() => {
-    if (!autoStart) {
+    if (!autoStart || !isConnected || !walletClient) {
       return;
     }
 
-    if (isConnected && walletClient && !isListening && !isInitializing) {
+    // Only auto-start once and when not already listening/initializing
+    if (!isListening && !isInitializing && !hasAutoStartedRef.current) {
       void start();
     }
-  }, [autoStart, isConnected, walletClient, isListening, isInitializing, start]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, isConnected, walletClient]);
 
   /**
    * Stop listeners when wallet disconnects
    */
   useEffect(() => {
     if (!isConnected && isListening) {
-      stop();
+      contractEventListenerService.stop();
+      setIsListening(false);
+      hasAutoStartedRef.current = false;
     }
-  }, [isConnected, isListening, stop]);
-
-  /**
-   * Handle account changes - restart listeners
-   */
-  useEffect(() => {
-    if (isListening && address) {
-      if (enableLogging) {
-        console.log('👤 Account changed, restarting listeners...');
-      }
-      stop();
-      // Will auto-restart via autoStart effect
-    }
-  }, [address, isListening, stop, enableLogging]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
   /**
    * Cleanup on unmount
