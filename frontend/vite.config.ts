@@ -30,7 +30,7 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true,
       filename: './dist/stats.html',
-    }),
+    }) as any,
     
     // PWA with service worker for offline support
     VitePWA({
