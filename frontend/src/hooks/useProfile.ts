@@ -29,6 +29,16 @@ export const useProfile = (address?: Address) => {
 
   const profile = rawProfile ? transformProfile(rawProfile) : undefined;
 
+  console.log('[useProfile Debug]', {
+    targetAddress,
+    rawProfile,
+    profile,
+    isLoading,
+    isError,
+    error: error ? (error as Error).message : null,
+    contractAddress: CONTRACT_ADDRESSES.tipzProfile,
+  });
+
   return {
     profile,
     isLoading,
@@ -59,6 +69,16 @@ export const useProfileByUsername = (username: string) => {
 
   const profile = rawProfile ? transformProfile(rawProfile) : undefined;
 
+  console.log('[useProfileByUsername Debug]', {
+    username,
+    rawProfile,
+    profile,
+    isLoading,
+    isError,
+    error: error ? (error as Error).message : null,
+    contractAddress: CONTRACT_ADDRESSES.tipzProfile,
+  });
+
   return {
     profile,
     isLoading,
@@ -88,6 +108,29 @@ export const useIsRegistered = (address?: Address) => {
   return {
     isRegistered: isRegistered || false,
     isLoading,
+  };
+};
+
+export const useIsUsernameTaken = (username: string) => {
+  const { 
+    data: isTaken, 
+    isLoading,
+    refetch
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzProfile,
+    abi: TIPZ_PROFILE_ABI,
+    functionName: 'isUsernameTaken',
+    args: username ? [username] : undefined,
+    query: {
+      enabled: !!username && username.length >= 1,
+      staleTime: 0, // Always check fresh
+    },
+  });
+
+  return {
+    isTaken: isTaken || false,
+    isLoading,
+    refetch,
   };
 };
 

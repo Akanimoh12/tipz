@@ -24,24 +24,24 @@ export function Landing() {
   return (
     <>
       <Helmet>
-        <title>Tipz - Decentralized Tipping for Creators on Somnia</title>
+        <title>Tipz - Turn Your X Influence Into On-Chain Reputation</title>
         <meta
           name="description"
-          content="Support your favorite creators with instant tips on Somnia blockchain. Fast, transparent, and creator-friendly. 98% goes to creators, 2% platform fee."
+          content="Tokenize your X (Twitter) social presence and unlock Web3 opportunities. Instant peer-to-peer tipping powered by Somnia's real-time blockchain. 98% to creators, 2% platform fee."
         />
-        <meta name="keywords" content="tipping, crypto, blockchain, creators, Somnia, web3, decentralized" />
-        <meta property="og:title" content="Tipz - Decentralized Tipping for Creators" />
+        <meta name="keywords" content="X tokenization, on-chain reputation, crypto tipping, blockchain creators, Somnia Network, web3, credit score, Twitter influence" />
+        <meta property="og:title" content="Tipz - Turn Your X Influence Into On-Chain Reputation" />
         <meta
           property="og:description"
-          content="Support your favorite creators with instant tips on Somnia blockchain. Fast, transparent, and creator-friendly."
+          content="Tokenize your X social presence into verifiable on-chain reputation. Support creators instantly on Somnia blockchain."
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://tipz.app" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Tipz - Decentralized Tipping for Creators" />
+        <meta name="twitter:title" content="Tipz - Turn Your X Influence Into On-Chain Reputation" />
         <meta
           name="twitter:description"
-          content="Support your favorite creators with instant tips on Somnia blockchain."
+          content="Tokenize your X influence into on-chain reputation. Instant tipping powered by Somnia Network."
         />
         <link rel="canonical" href="https://tipz.app" />
       </Helmet>
@@ -49,27 +49,39 @@ export function Landing() {
       <main className="min-h-screen">
         <HeroSection />
 
-        <LiveTickerSection />
+        <div className="py-3xl">
+          <LiveTickerSection />
+        </div>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <HowItWorksSection />
-        </Suspense>
+        <div className="py-3xl">
+          <Suspense fallback={<SectionSkeleton />}>
+            <HowItWorksSection />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <TopCreatorsSection />
-        </Suspense>
+        <div className="py-3xl">
+          <Suspense fallback={<SectionSkeleton />}>
+            <TopCreatorsSection />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <FeaturesSection />
-        </Suspense>
+        <div className="py-3xl">
+          <Suspense fallback={<SectionSkeleton />}>
+            <FeaturesSection />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <RoadmapSection />
-        </Suspense>
+        <div className="py-3xl">
+          <Suspense fallback={<SectionSkeleton />}>
+            <RoadmapSection />
+          </Suspense>
+        </div>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <CTABanner />
-        </Suspense>
+        <div className="py-3xl">
+          <Suspense fallback={<SectionSkeleton />}>
+            <CTABanner />
+          </Suspense>
+        </div>
       </main>
     </>
   );

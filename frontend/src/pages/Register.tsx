@@ -1,19 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Helmet } from 'react-helmet-async';
-import { CheckCircle2, Circle, Upload, X as XIcon, Loader2, Share2 } from 'lucide-react';
+import { CheckCircle2, Circle, Upload, X as XIcon, Loader2, Share2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/molecules/Card';
 import { WalletButton } from '@/components/molecules/WalletButton';
 import { Avatar } from '@/components/atoms/Avatar';
+import { Input } from '@/components/atoms/Input';
 import { pinataService, type UploadProgress } from '@/services/pinata.service';
 import { xapiService, type XUserStats } from '@/services/xapi.service';
 import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI } from '@/services/contract.service';
+import { useIsUsernameTaken } from '@/hooks/useProfile';
+import { useDebounce } from '../hooks/useDebounce';
 
 const STORAGE_KEY = 'tipz_registration_progress';
 
@@ -26,6 +29,10 @@ const registrationSchema = z.object({
     posts: z.number().min(0),
     replies: z.number().min(0),
   }).nullable(),
+  customUsername: z.string()
+    .min(1, 'Username is required')
+    .max(15, 'Username must be 15 characters or less')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
   imageFile: z.instanceof(File).nullable(),
   ipfsHash: z.string().nullable(),
 });
@@ -83,6 +90,7 @@ export function Register() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [xData, setXData] = useState<XUserStats | null>(null);
+  const [customUsername, setCustomUsername] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [ipfsHash, setIpfsHash] = useState<string | null>(null);
@@ -90,6 +98,27 @@ export function Register() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Debounce username input for availability check
+  const debouncedUsername = useDebounce(customUsername, 500);
+  
+  // Check if username is taken
+  const { isTaken: isUsernameTaken, isLoading: checkingUsername } = useIsUsernameTaken(debouncedUsername);
+
+  // Generate suggested username from X data
+  const suggestedUsername = useMemo(() => {
+    if (!xData) return '';
+    // Remove @ symbol and clean username
+    const cleanXUsername = xData.username.replace('@', '').toLowerCase();
+    return cleanXUsername;
+  }, [xData]);
+
+  // Set suggested username when X data is loaded
+  useEffect(() => {
+    if (suggestedUsername && !customUsername) {
+      setCustomUsername(suggestedUsername);
+    }
+  }, [suggestedUsername, customUsername]);
 
   const { handleSubmit } = useForm<RegistrationData>({
     resolver: zodResolver(registrationSchema),
@@ -277,15 +306,25 @@ export function Register() {
       return;
     }
 
+    if (!customUsername) {
+      toast.error('Please choose a username');
+      return;
+    }
+
+    if (isUsernameTaken) {
+      toast.error('Username is already taken');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       // Show toast that transaction is being prepared
       toast.loading('Preparing transaction...', { id: 'register-tx' });
       
-      // Prepare contract arguments
+      // Prepare contract arguments - use custom username instead of X username
       const contractArgs = [
-        xData.username,
+        customUsername,
         BigInt(xData.followers),
         BigInt(xData.posts),
         BigInt(xData.replies),
@@ -442,7 +481,7 @@ export function Register() {
                       <span className="font-medium">Connected as @{xData.username}</span>
                     </div>
 
-                    <div className="max-w-md mx-auto">
+                    <div className="max-w-md mx-auto space-y-md">
                       <Card variant="elevated" padding="md" className="text-left">
                         <p className="text-body-sm font-medium mb-sm">Your Stats:</p>
                         <div className="space-y-xs text-body-sm text-primary/70">
@@ -460,13 +499,88 @@ export function Register() {
                           </div>
                         </div>
                       </Card>
+
+                      {/* Username Selection */}
+                      <Card variant="elevated" padding="md" className="text-left">
+                        <label htmlFor="customUsername" className="block text-body-sm font-medium mb-xs">
+                          Choose Your Tipz Username
+                        </label>
+                        <p className="text-body-xs text-primary/60 mb-sm">
+                          This will be your unique username on Tipz. It cannot be changed later.
+                        </p>
+                        
+                        <div className="relative">
+                          <Input
+                            id="customUsername"
+                            value={customUsername}
+                            onChange={(e) => setCustomUsername(e.target.value.toLowerCase())}
+                            placeholder="Enter username"
+                            className="pr-10"
+                            maxLength={15}
+                          />
+                          
+                          {/* Availability Indicator */}
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {checkingUsername ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
+                            ) : customUsername && customUsername.length >= 1 ? (
+                              isUsernameTaken ? (
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                              ) : (
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              )
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Validation Messages */}
+                        {customUsername && (
+                          <div className="mt-xs">
+                            {customUsername.length < 1 && (
+                              <p className="text-body-xs text-red-600 flex items-center gap-xs">
+                                <AlertCircle className="w-4 h-4" />
+                                Username is required
+                              </p>
+                            )}
+                            {customUsername.length > 15 && (
+                              <p className="text-body-xs text-red-600 flex items-center gap-xs">
+                                <AlertCircle className="w-4 h-4" />
+                                Username must be 15 characters or less
+                              </p>
+                            )}
+                            {!/^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length > 0 && (
+                              <p className="text-body-xs text-red-600 flex items-center gap-xs">
+                                <AlertCircle className="w-4 h-4" />
+                                Username can only contain letters, numbers, and underscores
+                              </p>
+                            )}
+                            {isUsernameTaken && /^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length <= 15 && (
+                              <p className="text-body-xs text-red-600 flex items-center gap-xs">
+                                <AlertCircle className="w-4 h-4" />
+                                Username is already taken. Try: {customUsername}1, {customUsername}_, or {customUsername}2
+                              </p>
+                            )}
+                            {!isUsernameTaken && !checkingUsername && /^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length > 0 && customUsername.length <= 15 && (
+                              <p className="text-body-xs text-green-600 flex items-center gap-xs">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Username is available!
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </Card>
                     </div>
 
                     <div className="flex gap-sm justify-center">
                       <Button variant="ghost" onClick={() => setCurrentStep(1)}>
                         Back
                       </Button>
-                      <Button variant="brand" size="lg" onClick={() => setCurrentStep(3)}>
+                      <Button 
+                        variant="brand" 
+                        size="lg" 
+                        onClick={() => setCurrentStep(3)}
+                        disabled={!customUsername || isUsernameTaken === true || checkingUsername || customUsername.length > 15 || !/^[a-zA-Z0-9_]+$/.test(customUsername)}
+                      >
                         Continue to Next Step
                       </Button>
                     </div>
@@ -630,10 +744,14 @@ export function Register() {
                         size="lg"
                       />
                       <div className="flex-1">
-                        <h3 className="text-h4 font-bold">@{xData?.username}</h3>
+                        <h3 className="text-h4 font-bold">@{customUsername}</h3>
                         <p className="text-body text-primary/70">{xData?.name}</p>
 
                         <div className="mt-md space-y-xs">
+                          <div className="flex justify-between text-body-sm">
+                            <span className="text-primary/70">X Account:</span>
+                            <span className="font-medium">@{xData?.username}</span>
+                          </div>
                           <div className="flex justify-between text-body-sm">
                             <span className="text-primary/70">Credit Score:</span>
                             <span className={`font-bold ${scoreTier.color}`}>

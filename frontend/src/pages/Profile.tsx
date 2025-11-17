@@ -49,12 +49,26 @@ export function Profile() {
   const isMyProfile = cleanUsername === 'me';
 
   // If @me, fetch profile by connected address, otherwise by username
-  const { profile: profileByAddress, isLoading: loadingByAddress } = useProfile(
+  const { profile: profileByAddress, isLoading: loadingByAddress, error: errorByAddress } = useProfile(
     isMyProfile ? connectedAddress : undefined
   );
-  const { profile: profileByUsername, isLoading: loadingByUsername, isError } = useProfileByUsername(
+  const { profile: profileByUsername, isLoading: loadingByUsername, isError, error: errorByUsername } = useProfileByUsername(
     isMyProfile ? '' : cleanUsername
   );
+
+  // Debug logging
+  console.log('[Profile Debug]', {
+    cleanUsername,
+    isMyProfile,
+    connectedAddress,
+    profileByAddress,
+    profileByUsername,
+    loadingByAddress,
+    loadingByUsername,
+    isError,
+    errorByAddress,
+    errorByUsername
+  });
 
   // Use the appropriate profile
   const contractProfile = isMyProfile ? profileByAddress : profileByUsername;
@@ -170,21 +184,41 @@ export function Profile() {
             <Card variant="elevated" padding="lg" className="text-center p-xl">
               <AlertCircle className="w-16 h-16 mx-auto mb-md text-primary/40" />
               <h1 className="text-h2 font-bold mb-sm">Profile Not Found</h1>
-              <p className="text-body text-primary/70 mb-xl">
+              <p className="text-body text-primary/70 mb-md">
                 {isMyProfile 
                   ? "You haven't registered a profile yet."
                   : `The profile @${cleanUsername} doesn't exist or has been deactivated.`
                 }
               </p>
-              <div className="flex gap-sm justify-center">
+              
+              {/* Debug info for development */}
+              {import.meta.env.DEV && (
+                <div className="mt-md p-md bg-accent rounded text-left text-body-sm">
+                  <p className="font-bold mb-xs">Debug Info:</p>
+                  <p>Looking for username: <code className="bg-primary/10 px-xs py-2xs rounded">{cleanUsername}</code></p>
+                  <p>Is My Profile: {isMyProfile ? 'Yes' : 'No'}</p>
+                  <p>Connected Address: {connectedAddress || 'Not connected'}</p>
+                  <p>Error: {errorByUsername?.message || errorByAddress?.message || 'Profile not found'}</p>
+                  <p className="mt-xs text-primary/60">
+                    Tip: Make sure you're using the username you registered with, not your X username.
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex gap-sm justify-center mt-xl">
                 {isMyProfile ? (
                   <Link to="/register">
                     <Button variant="brand">Register Now</Button>
                   </Link>
                 ) : (
-                  <Link to="/">
-                    <Button variant="brand">Back to Home</Button>
-                  </Link>
+                  <>
+                    <Link to="/">
+                      <Button variant="brand">Back to Home</Button>
+                    </Link>
+                    <Link to="/dashboard">
+                      <Button variant="primary">View Dashboard</Button>
+                    </Link>
+                  </>
                 )}
               </div>
             </Card>

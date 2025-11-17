@@ -10,17 +10,17 @@ const features = [
   {
     icon: Zap,
     title: 'Instant Tips',
-    description: 'Send support in seconds on Somnia Network',
+    description: 'Real-time support in 2-3 seconds via Somnia Streams',
   },
   {
     icon: TrendingUp,
-    title: 'Credit Score',
-    description: 'Build reputation with X social metrics',
+    title: 'On-Chain Credit Score',
+    description: 'Your X influence tokenized as verifiable reputation',
   },
   {
     icon: Shield,
-    title: 'Transparent',
-    description: 'All transactions verified on-chain',
+    title: '100% Transparent',
+    description: 'All transactions and reputation on-chain forever',
   },
 ];
 
@@ -81,9 +81,9 @@ export function HeroSection() {
               className="text-h1 md:text-display font-bold mb-md"
               variants={itemVariants}
             >
-              Tip Creators{' '}
+              Turn Your X Influence Into{' '}
               <span className="relative inline-block">
-                <span className="relative z-10">Instantly</span>
+                <span className="relative z-10">On-Chain Reputation</span>
                 <motion.span
                   className="absolute bottom-0 left-0 w-full h-4 bg-primary/20 -z-10"
                   initial={{ width: 0 }}
@@ -97,7 +97,7 @@ export function HeroSection() {
               variants={itemVariants}
               className="text-h4 md:text-h3 text-primary/70 mb-lg max-w-2xl mx-auto"
             >
-              Support your favorite creators with blockchain transparency on Somnia Network
+              Tokenize your X (Twitter) social presence and receive instant support from your community. Built on Somnia's real-time blockchain.
             </motion.p>
 
             <motion.div

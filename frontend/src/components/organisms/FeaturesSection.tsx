@@ -5,33 +5,33 @@ import { Shield, Zap, TrendingUp, Users, Lock, Globe } from 'lucide-react';
 const features = [
   {
     icon: Zap,
-    title: 'Instant Tips',
-    description: 'Send tips in seconds. Built on Somnia for lightning-fast transactions with minimal fees.',
+    title: 'Real-Time Everything',
+    description: 'Tips arrive in 2-3 seconds via Somnia Streams. Live leaderboards. Instant notifications. Feels like social media, but it\'s blockchain.',
   },
   {
     icon: TrendingUp,
-    title: 'Credit Scores',
-    description: 'On-chain reputation system based on X (Twitter) metrics. Build trust with supporters.',
+    title: 'Tokenized Influence',
+    description: 'Your X followers, engagement, and account age become on-chain credit score (0-1000). Verifiable reputation across Web3.',
   },
   {
     icon: Shield,
-    title: 'Transparent',
-    description: 'All tips are on-chain. View complete transaction history. No hidden fees.',
+    title: '100% Transparent',
+    description: 'Every tip, every transaction, every score calculation is on-chain. No hidden algorithms. View complete history anytime.',
   },
   {
     icon: Users,
-    title: 'Real-time Feed',
-    description: 'See tips as they happen via Somnia Data Streams. Live activity updates.',
+    title: 'Supporter Reputation',
+    description: 'Active tippers earn credit scores too. Build on-chain reputation by supporting creators you love. Everyone wins.',
   },
   {
     icon: Lock,
-    title: 'Secure',
-    description: 'Non-custodial. Your keys, your funds. Smart contracts audited and battle-tested.',
+    title: 'Non-Custodial',
+    description: 'Your keys, your funds. We never hold your crypto. Smart contracts handle everything. No middlemen, ever.',
   },
   {
     icon: Globe,
-    title: 'Global',
-    description: 'Support creators worldwide. No borders, no intermediaries. Just peer-to-peer value.',
+    title: 'Borderless Support',
+    description: 'Support anyone, anywhere, instantly. No bank accounts, no payment processors. Just wallet-to-wallet value transfer.',
   },
 ];
 
@@ -62,9 +62,9 @@ export function FeaturesSection() {
     <section className="py-2xl bg-accent">
       <div className="container mx-auto px-md">
         <div className="text-center mb-xl">
-          <h2 className="text-h1 font-bold mb-sm">Why Choose Tipz?</h2>
+          <h2 className="text-h1 font-bold mb-sm">Not Just Tipping. Portable Reputation.</h2>
           <p className="text-body-lg text-primary/70 max-w-2xl mx-auto">
-            Built on Somnia blockchain with creator-first features and supporter rewards.
+            Your Web2 influence becomes Web3 reputation. Unlock opportunities beyond social media.
           </p>
         </div>
 

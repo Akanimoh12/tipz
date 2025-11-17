@@ -1,6 +1,6 @@
 import { useReadContract } from 'wagmi';
 import { type Address } from 'viem';
-import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI, type LeaderboardEntry as ContractLeaderboardEntry } from '../services/contract.service';
+import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI, TIPZ_PROFILE_ABI, type LeaderboardEntry as ContractLeaderboardEntry } from '../services/contract.service';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -31,13 +31,23 @@ const transformLeaderboardEntry = (entry: ContractLeaderboardEntry, index: numbe
 export const useTopCreators = (limit: number = 50) => {
   const { 
     data: rawCreators, 
-    isLoading, 
+    isLoading,
+    error,
     refetch 
   } = useReadContract({
     address: CONTRACT_ADDRESSES.tipzCore,
     abi: TIPZ_CORE_ABI,
     functionName: 'getTopCreators',
     args: [BigInt(limit)],
+  });
+
+  // Debug logging
+  console.log('[useTopCreators Debug]', {
+    rawCreators,
+    isLoading,
+    error,
+    contractAddress: CONTRACT_ADDRESSES.tipzCore,
+    limit,
   });
 
   const creators = rawCreators 
@@ -97,5 +107,37 @@ export const useUserRank = (username: string) => {
   return {
     rank: rank ? Number(rank) : 0,
     isLoading,
+  };
+};
+
+/**
+ * Hook to get all registered users (for debugging/admin purposes)
+ * Shows all users regardless of tip activity
+ */
+export const useAllRegisteredUsers = () => {
+  const { 
+    data: totalRegistrations, 
+    isLoading: loadingTotal,
+    error,
+    isError
+  } = useReadContract({
+    address: CONTRACT_ADDRESSES.tipzProfile,
+    abi: TIPZ_PROFILE_ABI,
+    functionName: 'getTotalRegistrations',
+  });
+
+  console.log('[useAllRegisteredUsers Debug]', {
+    totalRegistrations: totalRegistrations ? Number(totalRegistrations) : 0,
+    loadingTotal,
+    isError,
+    error: error ? (error as Error).message : null,
+    contractAddress: CONTRACT_ADDRESSES.tipzProfile,
+  });
+
+  // Return 0 if there's an error
+  return {
+    totalRegistrations: (isError || !totalRegistrations) ? 0 : Number(totalRegistrations),
+    isLoading: loadingTotal,
+    error,
   };
 };

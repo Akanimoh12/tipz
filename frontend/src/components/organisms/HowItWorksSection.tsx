@@ -5,20 +5,20 @@ import { Zap, Users, TrendingUp } from 'lucide-react';
 const steps = [
   {
     number: '01',
-    title: 'Connect Wallet',
-    description: 'Connect your wallet with RainbowKit. Support for MetaMask, WalletConnect, and more.',
+    title: 'Tokenize Your X Account',
+    description: 'Connect wallet and X account. Your followers, engagement, and influence become an instant on-chain credit score (0-1000 points).',
     icon: Zap,
   },
   {
     number: '02',
-    title: 'Find Creators',
-    description: 'Browse profiles, check credit scores, and discover amazing creators to support.',
+    title: 'Share Your Profile',
+    description: 'Get your unique Tipz username (tipz.app/@you). Share it anywhere. Build verifiable on-chain reputation as you receive support.',
     icon: Users,
   },
   {
     number: '03',
-    title: 'Send Tips',
-    description: 'Send tips in seconds. 98% goes to creators, 2% platform fee. Instant confirmation.',
+    title: 'Receive & Send Tips',
+    description: 'Supporters send tips instantly. You receive 98% (2% platform fee). See everything in real-time via Somnia Streams. Support others too!',
     icon: TrendingUp,
   },
 ];
@@ -50,9 +50,9 @@ export function HowItWorksSection() {
     <section className="py-2xl bg-secondary">
       <div className="container mx-auto px-md">
         <div className="text-center mb-xl">
-          <h2 className="text-h1 font-bold mb-sm">How It Works</h2>
+          <h2 className="text-h1 font-bold mb-sm">From X to Web3 in 30 Seconds</h2>
           <p className="text-body-lg text-primary/70 max-w-2xl mx-auto">
-            Get started with Tipz in three simple steps. No complex setup required.
+            No complex setup. Just connect, tokenize, and start building portable on-chain reputation.
           </p>
         </div>
 

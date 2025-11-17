@@ -9,7 +9,7 @@ import { Button } from '@/components/atoms/Button';
 import { Card } from '@/components/molecules/Card';
 import { Input } from '@/components/atoms/Input';
 import { Skeleton } from '@/components/atoms/Skeleton';
-import { useTopCreators, useTopTippers } from '@/hooks/useLeaderboard';
+import { useTopCreators, useTopTippers, useAllRegisteredUsers } from '@/hooks/useLeaderboard';
 import { useLeaderboardStream } from '@/hooks/useStreams';
 import { formatEther } from 'viem';
 
@@ -67,6 +67,19 @@ export function Leaderboard() {
   // Get real-time data from contract
   const { creators, isLoading: creatorsLoading } = useTopCreators(50);
   const { tippers, isLoading: tippersLoading } = useTopTippers(50);
+  const { totalRegistrations, error: registrationsError } = useAllRegisteredUsers();
+  
+  // Debug logging
+  console.log('[Leaderboard Debug]', {
+    totalRegistrations,
+    registrationsError,
+    creators,
+    creatorsCount: creators.length,
+    creatorsLoading,
+    tippers,
+    tippersCount: tippers.length,
+    tippersLoading,
+  });
   
   // Subscribe to real-time leaderboard updates via Somnia Streams
   useLeaderboardStream({
@@ -313,12 +326,36 @@ export function Leaderboard() {
                 <tr>
                   <td colSpan={activeTab === 'creators' ? 6 : 5} className="px-md py-xl text-center">
                     <div className="flex flex-col items-center gap-md">
-                      <Search className="w-12 h-12 text-primary/30" />
-                      <p className="text-body text-primary/70">No results found</p>
-                      {searchQuery && (
-                        <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
-                          Clear search
-                        </Button>
+                      {searchQuery ? (
+                        <>
+                          <Search className="w-12 h-12 text-primary/30" />
+                          <p className="text-body text-primary/70">No results found for "{searchQuery}"</p>
+                          <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
+                            Clear search
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Trophy className="w-12 h-12 text-primary/30" />
+                          <div className="max-w-md">
+                            <p className="text-body font-bold mb-xs">
+                              {activeTab === 'creators' ? 'No Creators on Leaderboard Yet' : 'No Tippers Yet'}
+                            </p>
+                            <p className="text-body-sm text-primary/70 mb-md">
+                              {activeTab === 'creators' 
+                                ? totalRegistrations > 0
+                                  ? `${totalRegistrations} creator${totalRegistrations === 1 ? '' : 's'} registered! The leaderboard will show creators once they receive their first tip. Be the first to support a creator!`
+                                  : "Creators will appear here once they receive their first tip. Be the first to support a creator!"
+                                : "Tippers will appear here once they send their first tip. Be the first to tip a creator!"
+                              }
+                            </p>
+                            <Link to={activeTab === 'creators' ? '/dashboard' : '/register'}>
+                              <Button variant="primary" size="sm">
+                                {activeTab === 'creators' ? 'Send a Tip' : 'Get Started'}
+                              </Button>
+                            </Link>
+                          </div>
+                        </>
                       )}
                     </div>
                   </td>
@@ -398,12 +435,36 @@ export function Leaderboard() {
             {!isLoading && paginatedData.length === 0 && (
               <Card variant="elevated" padding="lg">
                 <div className="flex flex-col items-center gap-md text-center">
-                  <Search className="w-12 h-12 text-primary/30" />
-                  <p className="text-body text-primary/70">No results found</p>
-                  {searchQuery && (
-                    <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
-                      Clear search
-                    </Button>
+                  {searchQuery ? (
+                    <>
+                      <Search className="w-12 h-12 text-primary/30" />
+                      <p className="text-body text-primary/70">No results found for "{searchQuery}"</p>
+                      <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
+                        Clear search
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-12 h-12 text-primary/30" />
+                      <div>
+                        <p className="text-body font-bold mb-xs">
+                          {activeTab === 'creators' ? 'No Creators on Leaderboard Yet' : 'No Tippers Yet'}
+                        </p>
+                        <p className="text-body-sm text-primary/70 mb-md">
+                          {activeTab === 'creators' 
+                            ? totalRegistrations > 0
+                              ? `${totalRegistrations} creator${totalRegistrations === 1 ? '' : 's'} registered! The leaderboard will show creators once they receive their first tip. Be the first to support a creator!`
+                              : "Creators will appear here once they receive their first tip. Be the first to support a creator!"
+                            : "Tippers will appear here once they send their first tip. Be the first to tip a creator!"
+                          }
+                        </p>
+                        <Link to={activeTab === 'creators' ? '/dashboard' : '/register'}>
+                          <Button variant="primary" size="sm">
+                            {activeTab === 'creators' ? 'Send a Tip' : 'Get Started'}
+                          </Button>
+                        </Link>
+                      </div>
+                    </>
                   )}
                 </div>
               </Card>

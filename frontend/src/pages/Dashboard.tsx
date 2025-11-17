@@ -6,9 +6,10 @@ import { StatDisplay } from '@/components/molecules/StatDisplay';
 import { ActivityFeed } from '@/components/organisms/ActivityFeed';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/molecules/Card';
 import { Button } from '@/components/atoms/Button';
+import { Avatar } from '@/components/atoms/Avatar';
 import { Skeleton } from '@/components/atoms/Skeleton';
 import { useModalStore } from '@/store';
-import { useIsRegistered } from '@/hooks/useProfile';
+import { useProfile, useIsRegistered } from '@/hooks/useProfile';
 import { useUserStats, usePlatformStats } from '@/hooks/useUserStats';
 import { formatEther } from 'viem';
 
@@ -16,6 +17,7 @@ export function Dashboard() {
   const { isConnected, address } = useAccount();
   const { openWithdrawModal } = useModalStore();
   const { isRegistered, isLoading: checkingRegistration } = useIsRegistered(address);
+  const { profile } = useProfile(address);
 
   // Allow viewing dashboard without connection, but show different content
   const canAccessPersonalData = isConnected && isRegistered;
@@ -55,6 +57,35 @@ export function Dashboard() {
 
       <main className="min-h-screen bg-accent py-xl">
         <div className="container mx-auto px-md">
+          {/* Show profile info if registered */}
+          {canAccessPersonalData && profile && (
+            <Card variant="elevated" padding="md" className="mb-lg border-2 border-green-500">
+              <div className="flex items-center justify-between gap-md">
+                <div className="flex items-center gap-md">
+                  <Avatar
+                    src={profile.profileImageIpfs}
+                    alt={profile.xUsername}
+                    fallbackText={profile.xUsername.slice(0, 2).toUpperCase()}
+                    size="md"
+                  />
+                  <div>
+                    <h3 className="text-h4 font-bold mb-xs">@{profile.xUsername}</h3>
+                    <p className="text-body-sm text-primary/70">
+                      Your profile URL: <Link to={`/@${profile.xUsername}`} className="text-brand hover:underline">
+                        tipz.app/@{profile.xUsername}
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+                <Link to="/@me">
+                  <Button variant="primary" size="sm">
+                    View Profile
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
+
           {/* Show registration prompt if connected but not registered */}
           {needsRegistration && !checkingRegistration && (
             <Card variant="elevated" padding="md" className="mb-lg border-2 border-brand">

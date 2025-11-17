@@ -16,47 +16,47 @@ interface Quarter {
 
 const roadmapData: Quarter[] = [
   {
-    quarter: 'Q1 2025',
-    phase: 'MVP Launch',
+    quarter: 'Q4 2025',
+    phase: 'Foundation Launch',
     status: 'completed',
     milestones: [
-      { title: 'Profile creation & registration', status: 'completed' },
-      { title: 'Basic tipping functionality', status: 'completed' },
-      { title: 'Credit score system', status: 'completed' },
-      { title: 'X (Twitter) integration', status: 'completed' },
+      { title: 'X account tokenization system', status: 'completed' },
+      { title: 'On-chain credit scores (0-1000)', status: 'completed' },
+      { title: 'Instant peer-to-peer tipping', status: 'completed' },
+      { title: 'Real-time Somnia Streams integration', status: 'completed' },
     ],
   },
   {
-    quarter: 'Q2 2025',
-    phase: 'Advanced Features',
+    quarter: 'Q1 2026',
+    phase: 'Enhanced Reputation',
     status: 'active',
     milestones: [
-      { title: 'Real-time Somnia Streams', status: 'completed' },
-      { title: 'Dynamic leaderboards', status: 'completed' },
-      { title: 'Withdrawal system', status: 'active' },
-      { title: 'Enhanced analytics dashboard', status: 'upcoming' },
+      { title: 'Dynamic credit score updates', status: 'active' },
+      { title: 'Reputation badges for supporters', status: 'active' },
+      { title: 'Historical reputation tracking', status: 'upcoming' },
+      { title: 'Multi-platform support (beyond X)', status: 'upcoming' },
     ],
   },
   {
-    quarter: 'Q3 2025',
-    phase: 'Platform Integrations',
+    quarter: 'Q2 2026',
+    phase: 'Unlock Web3 Opportunities',
     status: 'upcoming',
     milestones: [
-      { title: 'Multi-token support (USDC, custom)', status: 'upcoming' },
-      { title: 'Public API access', status: 'upcoming' },
+      { title: 'Credit score-based lending', status: 'upcoming' },
+      { title: 'DAO governance by influence', status: 'upcoming' },
+      { title: 'Exclusive gated communities', status: 'upcoming' },
+      { title: 'Mintable creator NFTs', status: 'upcoming' },
+    ],
+  },
+  {
+    quarter: 'Q3 2026',
+    phase: 'Scale to Millions',
+    status: 'upcoming',
+    milestones: [
+      { title: 'Somnia mainnet launch', status: 'upcoming' },
       { title: 'Mobile app (iOS & Android)', status: 'upcoming' },
-      { title: 'Browser extension', status: 'upcoming' },
-    ],
-  },
-  {
-    quarter: 'Q4 2025',
-    phase: 'Scale & Growth',
-    status: 'upcoming',
-    milestones: [
-      { title: 'Advanced creator analytics', status: 'upcoming' },
-      { title: 'Team accounts & multi-sig', status: 'upcoming' },
-      { title: 'Subscription tipping model', status: 'upcoming' },
-      { title: 'Cross-chain bridge integration', status: 'upcoming' },
+      { title: 'Browser extension for one-click tips', status: 'upcoming' },
+      { title: 'Instagram & TikTok integration', status: 'upcoming' },
     ],
   },
 ];
@@ -119,9 +119,9 @@ export function RoadmapSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-xl"
         >
-          <h2 className="text-h2 font-bold mb-sm">Platform Roadmap</h2>
+          <h2 className="text-h2 font-bold mb-sm">The Journey to 100M Users</h2>
           <p className="text-body-lg text-primary/70 max-w-2xl mx-auto">
-            Building the future of creator tipping on Somnia Network
+            From X tokenization to portable Web3 reputation. Making on-chain identity as common as social media profiles.
           </p>
         </motion.div>
 
