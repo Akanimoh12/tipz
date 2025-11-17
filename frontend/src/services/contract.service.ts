@@ -1,6 +1,6 @@
 import { parseEther, formatEther, type Address } from 'viem';
-import TipzProfileABI from '../../../contract/out/TipzProfile.sol/TipzProfile.json';
-import TipzCoreABI from '../../../contract/out/TipzCore.sol/TipzCore.json';
+import TipzProfileABI from '../contracts/TipzProfile.json';
+import TipzCoreABI from '../contracts/TipzCore.json';
 
 export const TIPZ_PROFILE_ABI = TipzProfileABI.abi;
 export const TIPZ_CORE_ABI = TipzCoreABI.abi;
