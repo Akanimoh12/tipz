@@ -96,7 +96,7 @@ export const useProfileWrite = (
       address: CONTRACT_ADDRESSES.tipzProfile,
       abi: TIPZ_PROFILE_ABI,
       functionName,
-      args,
+      args: args || [],
       value,
     });
   } : undefined;
@@ -106,7 +106,7 @@ export const useProfileWrite = (
       address: CONTRACT_ADDRESSES.tipzProfile,
       abi: TIPZ_PROFILE_ABI,
       functionName,
-      args,
+      args: args || [],
       value,
     });
   } : undefined;
@@ -153,7 +153,7 @@ export const useTipzCoreWrite = (
       address: CONTRACT_ADDRESSES.tipzCore,
       abi: TIPZ_CORE_ABI,
       functionName,
-      args,
+      args: args || [],
       value,
     });
   } : undefined;
@@ -163,7 +163,7 @@ export const useTipzCoreWrite = (
       address: CONTRACT_ADDRESSES.tipzCore,
       abi: TIPZ_CORE_ABI,
       functionName,
-      args,
+      args: args || [],
       value,
     });
   } : undefined;
