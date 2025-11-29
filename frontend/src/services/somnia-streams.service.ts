@@ -17,7 +17,7 @@
 // chosen approach. This will be addressed in Prompt 5 or when contract integration happens.
 
 import { SDK } from '@somnia-chain/streams';
-import type { SchemaDecodedItem, SchemaEncoder } from '@somnia-chain/streams';
+import type { SchemaEncoder } from '@somnia-chain/streams';
 import { createPublicClient, createWalletClient, http, custom, getAddress, type PublicClient, type WalletClient, type Hex, type Address } from 'viem';
 import { DEFAULT_CHAIN } from '@/config/somnia.config';
 import {
@@ -34,6 +34,12 @@ import {
 } from '@/config/somnia-streams.config';
 
 type SubscriptionCallback<T extends SomniaStreamEvent> = (event: T) => void;
+
+type DecodedSchemaItem = {
+  name: string;
+  type: string;
+  value: unknown;
+};
 
 interface StreamSubscription {
   id: string;
@@ -220,8 +226,8 @@ class SomniaStreamsService {
 
     const addresses = seed
       .split(',')
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
+      .map((value: string) => value.trim())
+      .filter((value: string) => value.length > 0);
 
     for (const addr of addresses) {
       this.registerPublisher(addr);
@@ -318,7 +324,8 @@ class SomniaStreamsService {
       lastProcessedTimestamp: 0n,
     };
     
-    this.subscriptions.set(subscriptionId, subscription);
+  const baseSubscription = subscription as InternalSubscription<SomniaStreamEvent>;
+  this.subscriptions.set(subscriptionId, baseSubscription);
     
     if (!this.pollingIntervals.has(schemaName)) {
       if (schemaName === STREAM_SCHEMA_NAMES.TIP_EVENT) {
@@ -392,12 +399,12 @@ class SomniaStreamsService {
             return [];
           }
 
-          // SDK returns SchemaDecodedItem[][] for public schemas or Hex[] for private schemas
+          // SDK returns decoded tuples for public schemas or Hex[] for private schemas
           // Since we're using public schemas, data is already decoded
           const events: SomniaTipEvent[] = [];
           
           if (Array.isArray(data) && data.length > 0) {
-            // Check if it's Hex[] (private schema) or SchemaDecodedItem[][] (public schema)
+            // Check if it's Hex[] (private schema) or DecodedSchemaItem[][] (public schema)
             const firstItem = data[0];
             
             if (typeof firstItem === 'string') {
@@ -428,8 +435,8 @@ class SomniaStreamsService {
                 }
               }
             } else {
-              // SchemaDecodedItem[][] - already decoded
-              for (const decodedItems of data as SchemaDecodedItem[][]) {
+              // DecodedSchemaItem[][] - already decoded
+              for (const decodedItems of data as DecodedSchemaItem[][]) {
                 try {
                   const event: SomniaTipEvent = {
                     tipId: decodedItems[0].value as unknown as bigint,
@@ -640,8 +647,8 @@ class SomniaStreamsService {
                   }
                 }
               } else {
-                // SchemaDecodedItem[][] - already decoded
-                for (const decodedItems of data as SchemaDecodedItem[][]) {
+                // DecodedSchemaItem[][] - already decoded
+                for (const decodedItems of data as DecodedSchemaItem[][]) {
                   try {
                     let event: SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent;
                     
@@ -831,8 +838,8 @@ class SomniaStreamsService {
                 }
               }
             } else {
-              // SchemaDecodedItem[][] - already decoded
-              for (const decodedItems of data as SchemaDecodedItem[][]) {
+              // DecodedSchemaItem[][] - already decoded
+              for (const decodedItems of data as DecodedSchemaItem[][]) {
                 try {
                   const event: SomniaLeaderboardUpdate = {
                     updateType: decodedItems[0].value as unknown as 'top_creators' | 'top_tippers',
