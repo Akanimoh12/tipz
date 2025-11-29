@@ -1,5 +1,6 @@
+const APP_URL = (import.meta.env.VITE_APP_URL || 'http://localhost:5173').replace(/\/$/, '');
 const X_API_CLIENT_ID = import.meta.env.VITE_X_API_CLIENT_ID || '';
-const X_API_REDIRECT_URI = `${import.meta.env.VITE_APP_URL || 'http://localhost:5173'}/register`;
+const X_API_REDIRECT_URI = `${APP_URL}/register`;
 const X_OAUTH_STATE_KEY = 'tipz_x_oauth_state';
 const X_USER_DATA_KEY = 'tipz_x_user_data';
 const X_ACCESS_TOKEN_KEY = 'tipz_x_access_token';
@@ -276,11 +277,27 @@ class XAPIService {
       };
     }
 
-    // Check if redirect URI is properly configured
-    if (X_API_REDIRECT_URI.includes('localhost') && !X_API_REDIRECT_URI.includes('http://localhost:5173')) {
+    if (!import.meta.env.VITE_APP_URL) {
       return {
         valid: false,
-        message: 'Redirect URI mismatch. Please ensure VITE_APP_URL matches your development server.',
+        message: 'VITE_APP_URL is not configured. Set it to your site URL (e.g. https://tipz-rosy.vercel.app).',
+      };
+    }
+
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const isLocalhost = APP_URL.includes('localhost');
+
+    if (currentOrigin && !currentOrigin.startsWith(APP_URL)) {
+      return {
+        valid: false,
+        message: `VITE_APP_URL (${APP_URL}) does not match the current site origin (${currentOrigin}). Update VITE_APP_URL and your X OAuth redirect to ${currentOrigin}/register.`,
+      };
+    }
+
+    if (!isLocalhost && APP_URL.startsWith('http://')) {
+      return {
+        valid: false,
+        message: 'Production VITE_APP_URL must use HTTPS. Update it in your environment settings.',
       };
     }
 
