@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Helmet } from 'react-helmet-async';
 import { CheckCircle2, Circle, Upload, X as XIcon, Loader2, Share2, AlertCircle, Shuffle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -41,25 +38,6 @@ const FALLBACK_USERNAMES = [
   'cobaltkoala',
   'zenzebra',
 ];
-
-const registrationSchema = z.object({
-  walletConnected: z.boolean(),
-  xData: z.object({
-    username: z.string().min(1),
-    name: z.string().min(1),
-    followers: z.number().min(0),
-    posts: z.number().min(0),
-    replies: z.number().min(0),
-  }).nullable(),
-  customUsername: z.string()
-    .min(1, 'Username is required')
-    .max(15, 'Username must be 15 characters or less')
-    .regex(/^\w+$/, 'Username can only contain letters, numbers, and underscores'),
-  imageFile: z.instanceof(File).nullable(),
-  ipfsHash: z.string().nullable(),
-});
-
-type RegistrationData = z.infer<typeof registrationSchema>;
 
 interface StepConfig {
   step: number;
@@ -281,16 +259,6 @@ export function Register() {
       cancelled = true;
     };
   }, [applyGeneratedUsername, customUsername, generateAvailableUsername, isUsernameTaken]);
-
-  const { handleSubmit } = useForm<RegistrationData>({
-    resolver: zodResolver(registrationSchema),
-    defaultValues: {
-      walletConnected: false,
-      xData: null,
-      imageFile: null,
-      ipfsHash: null,
-    },
-  });
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -1005,7 +973,9 @@ export function Register() {
                     <Button
                       variant="brand"
                       size="lg"
-                      onClick={handleSubmit(onSubmit)}
+                      onClick={() => {
+                        void onSubmit();
+                      }}
                       disabled={isSubmitting || isContractPending || isConfirming}
                       isLoading={isSubmitting || isContractPending || isConfirming}
                     >
