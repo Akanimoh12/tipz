@@ -32,7 +32,7 @@ const registrationSchema = z.object({
   customUsername: z.string()
     .min(1, 'Username is required')
     .max(15, 'Username must be 15 characters or less')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+    .regex(/^\w+$/, 'Username can only contain letters, numbers, and underscores'),
   imageFile: z.instanceof(File).nullable(),
   ipfsHash: z.string().nullable(),
 });
@@ -521,15 +521,16 @@ export function Register() {
                           
                           {/* Availability Indicator */}
                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                            {checkingUsername ? (
+                            {checkingUsername && (
                               <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
-                            ) : customUsername && customUsername.length >= 1 ? (
+                            )}
+                            {!checkingUsername && customUsername && customUsername.length >= 1 && (
                               isUsernameTaken ? (
                                 <AlertCircle className="w-5 h-5 text-red-600" />
                               ) : (
                                 <CheckCircle2 className="w-5 h-5 text-green-600" />
                               )
-                            ) : null}
+                            )}
                           </div>
                         </div>
 
@@ -548,19 +549,19 @@ export function Register() {
                                 Username must be 15 characters or less
                               </p>
                             )}
-                            {!/^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length > 0 && (
+                            {!/^\w+$/.test(customUsername) && customUsername.length > 0 && (
                               <p className="text-body-xs text-red-600 flex items-center gap-xs">
                                 <AlertCircle className="w-4 h-4" />
                                 Username can only contain letters, numbers, and underscores
                               </p>
                             )}
-                            {isUsernameTaken && /^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length <= 15 && (
+                            {isUsernameTaken && /^\w+$/.test(customUsername) && customUsername.length <= 15 && (
                               <p className="text-body-xs text-red-600 flex items-center gap-xs">
                                 <AlertCircle className="w-4 h-4" />
                                 Username is already taken. Try: {customUsername}1, {customUsername}_, or {customUsername}2
                               </p>
                             )}
-                            {!isUsernameTaken && !checkingUsername && /^[a-zA-Z0-9_]+$/.test(customUsername) && customUsername.length > 0 && customUsername.length <= 15 && (
+                            {!isUsernameTaken && !checkingUsername && /^\w+$/.test(customUsername) && customUsername.length > 0 && customUsername.length <= 15 && (
                               <p className="text-body-xs text-green-600 flex items-center gap-xs">
                                 <CheckCircle2 className="w-4 h-4" />
                                 Username is available!
@@ -579,7 +580,7 @@ export function Register() {
                         variant="brand" 
                         size="lg" 
                         onClick={() => setCurrentStep(3)}
-                        disabled={!customUsername || isUsernameTaken === true || checkingUsername || customUsername.length > 15 || !/^[a-zA-Z0-9_]+$/.test(customUsername)}
+                        disabled={!customUsername || isUsernameTaken === true || checkingUsername || customUsername.length > 15 || !/^\w+$/.test(customUsername)}
                       >
                         Continue to Next Step
                       </Button>

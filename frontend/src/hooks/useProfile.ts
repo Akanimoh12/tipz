@@ -3,6 +3,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { type Address } from 'viem';
 import { useProfileWrite } from './useContract';
 import { CONTRACT_ADDRESSES, TIPZ_PROFILE_ABI, transformProfile } from '../services/contract.service';
+import { DEFAULT_CHAIN } from '../config/somnia.config';
 
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 
@@ -21,6 +22,7 @@ export const useProfile = (address?: Address) => {
     abi: TIPZ_PROFILE_ABI,
     functionName: 'getProfile',
     args: targetAddress ? [targetAddress] : undefined,
+    chainId: DEFAULT_CHAIN.id,
     query: {
       enabled: !!targetAddress,
       staleTime: PROFILE_STALE_TIME,
@@ -61,6 +63,7 @@ export const useProfileByUsername = (username: string) => {
     abi: TIPZ_PROFILE_ABI,
     functionName: 'getProfileByUsername',
     args: username ? [username] : undefined,
+    chainId: DEFAULT_CHAIN.id,
     query: {
       enabled: !!username,
       staleTime: PROFILE_STALE_TIME,
@@ -100,6 +103,7 @@ export const useIsRegistered = (address?: Address) => {
     abi: TIPZ_PROFILE_ABI,
     functionName: 'isRegistered',
     args: targetAddress ? [targetAddress] : undefined,
+    chainId: DEFAULT_CHAIN.id,
     query: {
       enabled: !!targetAddress,
     },
@@ -121,6 +125,7 @@ export const useIsUsernameTaken = (username: string) => {
     abi: TIPZ_PROFILE_ABI,
     functionName: 'isUsernameTaken',
     args: username ? [username] : undefined,
+    chainId: DEFAULT_CHAIN.id,
     query: {
       enabled: !!username && username.length >= 1,
       staleTime: 0, // Always check fresh

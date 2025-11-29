@@ -16,15 +16,15 @@
 // implemented and tested. Only the blockchain data reading logic needs completion based on
 // chosen approach. This will be addressed in Prompt 5 or when contract integration happens.
 
-import { SDK, SchemaEncoder } from '@somnia-chain/streams';
-import { createPublicClient, createWalletClient, http, custom, type PublicClient, type WalletClient, type Hex, type Address } from 'viem';
+import { SDK } from '@somnia-chain/streams';
+import type { SchemaDecodedItem, SchemaEncoder } from '@somnia-chain/streams';
+import { createPublicClient, createWalletClient, http, custom, getAddress, type PublicClient, type WalletClient, type Hex, type Address } from 'viem';
 import { DEFAULT_CHAIN } from '@/config/somnia.config';
 import {
-  TIP_EVENT_SCHEMA,
-  PROFILE_CREATED_SCHEMA,
-  PROFILE_UPDATED_SCHEMA,
-  LEADERBOARD_UPDATE_SCHEMA,
   STREAM_SCHEMA_NAMES,
+  STREAM_SCHEMA_DEFINITIONS,
+  type StreamSchemaDefinition,
+  type StreamSchemaName,
   SOMNIA_STREAMS_CONFIG,
   type SomniaStreamEvent,
   type SomniaTipEvent,
@@ -54,24 +54,38 @@ class SomniaStreamsService {
   private sdk: SDK | null = null;
   private publicClient: PublicClient | null = null;
   private walletClient: WalletClient | null = null;
-  private readonly encoders: Map<string, SchemaEncoder> = new Map();
-  private readonly schemaIds: Map<string, Hex> = new Map();
-  private readonly subscriptions: Map<string, InternalSubscription<any>> = new Map();
+  private readonly schemaIds: Map<StreamSchemaName, Hex> = new Map();
+  private readonly subscriptions: Map<string, InternalSubscription<SomniaStreamEvent>> = new Map();
   private readonly pollingIntervals: Map<string, ReturnType<typeof setInterval>> = new Map();
   private connectionState: ConnectionState = 'disconnected';
   private readonly eventCache: Set<string> = new Set();
   private readonly publisherRegistry: Set<Address> = new Set();
   private readonly PUBLISHER_STORAGE_KEY = 'somnia_stream_publishers';
 
+  private initializePromise: Promise<void> | null = null;
+
   async initialize(): Promise<void> {
     if (this.sdk) {
-      console.log('Somnia Streams SDK already initialized');
+      this.debug('Somnia Streams SDK already initialized');
       return;
     }
 
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
+
+    this.initializePromise = this.initializeInternal().catch((error) => {
+      this.initializePromise = null;
+      throw error;
+    });
+
+    return this.initializePromise;
+  }
+
+  private async initializeInternal(): Promise<void> {
     try {
       this.connectionState = 'connecting';
-      console.log('Initializing Somnia Streams SDK...');
+      this.debug('Initializing Somnia Streams SDK...');
 
       this.publicClient = createPublicClient({
         chain: DEFAULT_CHAIN,
@@ -90,13 +104,13 @@ class SomniaStreamsService {
         wallet: this.walletClient || undefined,
       });
 
-      this.initializeEncoders();
       await this.computeSchemaIds();
       this.loadPublishersFromStorage();
+      this.seedPublishersFromEnv();
 
       this.connectionState = 'connected';
-      console.log('✅ Somnia Streams SDK initialized successfully');
-      console.log('📋 Schema IDs:', Object.fromEntries(this.schemaIds));
+      this.debug('Somnia Streams SDK initialized successfully');
+      this.debug('Schema IDs:', Object.fromEntries(this.schemaIds));
 
     } catch (error) {
       this.connectionState = 'error';
@@ -105,39 +119,23 @@ class SomniaStreamsService {
     }
   }
 
-  private initializeEncoders(): void {
-    this.encoders.set(STREAM_SCHEMA_NAMES.TIP_EVENT, new SchemaEncoder(TIP_EVENT_SCHEMA));
-    this.encoders.set(STREAM_SCHEMA_NAMES.PROFILE_CREATED, new SchemaEncoder(PROFILE_CREATED_SCHEMA));
-    this.encoders.set(STREAM_SCHEMA_NAMES.PROFILE_UPDATED, new SchemaEncoder(PROFILE_UPDATED_SCHEMA));
-    this.encoders.set(STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE, new SchemaEncoder(LEADERBOARD_UPDATE_SCHEMA));
-    
-    console.log('📝 Initialized schema encoders for', this.encoders.size, 'schemas');
-  }
-
   private async computeSchemaIds(): Promise<void> {
     if (!this.sdk) {
       throw new Error('SDK not initialized');
     }
 
-    const schemas = [
-      { name: STREAM_SCHEMA_NAMES.TIP_EVENT, schema: TIP_EVENT_SCHEMA },
-      { name: STREAM_SCHEMA_NAMES.PROFILE_CREATED, schema: PROFILE_CREATED_SCHEMA },
-      { name: STREAM_SCHEMA_NAMES.PROFILE_UPDATED, schema: PROFILE_UPDATED_SCHEMA },
-      { name: STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE, schema: LEADERBOARD_UPDATE_SCHEMA },
-    ];
-
-    for (const { name, schema } of schemas) {
-      const schemaId = await this.sdk.streams.computeSchemaId(schema);
+  for (const [name, definition] of Object.entries(STREAM_SCHEMA_DEFINITIONS) as Array<[StreamSchemaName, StreamSchemaDefinition]>) {
+      const schemaId = await this.sdk.streams.computeSchemaId(definition.schema);
       if (schemaId instanceof Error) {
         console.error(`  ✗ Failed to compute schema ID for ${name}:`, schemaId);
         throw schemaId;
       }
       this.schemaIds.set(name, schemaId);
-      console.log(`  ✓ ${name}: ${schemaId}`);
+      this.debug(`Computed schema ID for ${name}: ${schemaId}`);
     }
   }
 
-  private getSchemaId(schemaName: string): Hex {
+  getSchemaId(schemaName: StreamSchemaName): Hex {
     const schemaId = this.schemaIds.get(schemaName);
     if (!schemaId) {
       throw new Error(`Schema ID not found for: ${schemaName}`);
@@ -145,12 +143,12 @@ class SomniaStreamsService {
     return schemaId;
   }
 
-  private getEncoder(schemaName: string): SchemaEncoder {
-    const encoder = this.encoders.get(schemaName);
-    if (!encoder) {
+  getEncoder(schemaName: StreamSchemaName): SchemaEncoder {
+    const definition = STREAM_SCHEMA_DEFINITIONS[schemaName];
+    if (!definition) {
       throw new Error(`Encoder not found for: ${schemaName}`);
     }
-    return encoder;
+    return definition.encoder;
   }
 
   private loadPublishersFromStorage(): void {
@@ -163,9 +161,9 @@ class SomniaStreamsService {
       if (stored) {
         const publishers = JSON.parse(stored) as string[];
         for (const addr of publishers) {
-          this.publisherRegistry.add(addr as Address);
+          this.registerPublisher(addr);
         }
-        console.log(`📖 Loaded ${publishers.length} known publishers from storage`);
+        this.debug(`Loaded ${publishers.length} known publishers from storage`);
       }
     } catch (error) {
       console.error('Error loading publishers from storage:', error);
@@ -185,12 +183,52 @@ class SomniaStreamsService {
     }
   }
 
-  private addPublisher(address: Address): void {
-    const sizeBefore = this.publisherRegistry.size;
-    this.publisherRegistry.add(address);
-    if (this.publisherRegistry.size > sizeBefore) {
-      console.log(`➕ Added new publisher: ${address}`);
-      this.savePublishersToStorage();
+  registerPublisher(address: string): Address | null {
+    try {
+      const normalized = getAddress(address);
+      const sizeBefore = this.publisherRegistry.size;
+      this.publisherRegistry.add(normalized);
+      if (this.publisherRegistry.size > sizeBefore) {
+        this.debug(`Registered new publisher: ${normalized}`);
+        this.savePublishersToStorage();
+      }
+      return normalized;
+    } catch (error) {
+      console.error('Invalid publisher address provided:', address, error);
+      return null;
+    }
+  }
+
+  getRegisteredPublishers(): Address[] {
+    return Array.from(this.publisherRegistry);
+  }
+
+  isRegisteredPublisher(address: string): boolean {
+    try {
+      const normalized = getAddress(address);
+      return this.publisherRegistry.has(normalized);
+    } catch {
+      return false;
+    }
+  }
+
+  private seedPublishersFromEnv(): void {
+    const seed = import.meta.env?.VITE_STREAM_PUBLISHERS;
+    if (!seed) {
+      return;
+    }
+
+    const addresses = seed
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    for (const addr of addresses) {
+      this.registerPublisher(addr);
+    }
+
+    if (addresses.length > 0) {
+      this.debug(`Seeded ${addresses.length} publishers from environment`);
     }
   }
 
@@ -223,6 +261,12 @@ class SomniaStreamsService {
   private ensureInitialized(): void {
     if (!this.sdk || this.connectionState !== 'connected') {
       throw new Error('Somnia Streams SDK not initialized. Call initialize() first.');
+    }
+  }
+
+  private debug(...args: unknown[]): void {
+    if (import.meta.env.DEV) {
+      console.debug('[SomniaStreams]', ...args);
     }
   }
 
@@ -385,7 +429,7 @@ class SomniaStreamsService {
               }
             } else {
               // SchemaDecodedItem[][] - already decoded
-              for (const decodedItems of data as any[][]) {
+              for (const decodedItems of data as SchemaDecodedItem[][]) {
                 try {
                   const event: SomniaTipEvent = {
                     tipId: decodedItems[0].value as unknown as bigint,
@@ -597,7 +641,7 @@ class SomniaStreamsService {
                 }
               } else {
                 // SchemaDecodedItem[][] - already decoded
-                for (const decodedItems of data as any[][]) {
+                for (const decodedItems of data as SchemaDecodedItem[][]) {
                   try {
                     let event: SomniaProfileCreatedEvent | SomniaProfileUpdatedEvent;
                     
@@ -788,7 +832,7 @@ class SomniaStreamsService {
               }
             } else {
               // SchemaDecodedItem[][] - already decoded
-              for (const decodedItems of data as any[][]) {
+              for (const decodedItems of data as SchemaDecodedItem[][]) {
                 try {
                   const event: SomniaLeaderboardUpdate = {
                     updateType: decodedItems[0].value as unknown as 'top_creators' | 'top_tippers',
@@ -971,9 +1015,9 @@ class SomniaStreamsService {
         return result;
       }
 
-      // Track publisher address for future reads
-      const [account] = await this.walletClient.getAddresses();
-      this.addPublisher(account);
+    // Track publisher address for future reads
+    const [account] = await this.walletClient.getAddresses();
+    this.registerPublisher(account);
 
       console.log(`📤 Published tip event: ${event.tipId}`);
       return result;
@@ -1019,9 +1063,9 @@ class SomniaStreamsService {
         return result;
       }
 
-      // Track publisher address for future reads
-      const [account] = await this.walletClient.getAddresses();
-      this.addPublisher(account);
+    // Track publisher address for future reads
+    const [account] = await this.walletClient.getAddresses();
+    this.registerPublisher(account);
 
       console.log(`📤 Published profile created: ${event.username}`);
       return result;
@@ -1067,9 +1111,9 @@ class SomniaStreamsService {
         return result;
       }
 
-      // Track publisher address for future reads
-      const [account] = await this.walletClient.getAddresses();
-      this.addPublisher(account);
+    // Track publisher address for future reads
+    const [account] = await this.walletClient.getAddresses();
+    this.registerPublisher(account);
 
       console.log(`📤 Published profile updated: ${event.username}`);
       return result;
@@ -1112,9 +1156,9 @@ class SomniaStreamsService {
         return result;
       }
 
-      // Track publisher address for future reads
-      const [account] = await this.walletClient.getAddresses();
-      this.addPublisher(account);
+    // Track publisher address for future reads
+    const [account] = await this.walletClient.getAddresses();
+    this.registerPublisher(account);
 
       console.log(`📤 Published leaderboard update: ${event.updateType}`);
       return result;

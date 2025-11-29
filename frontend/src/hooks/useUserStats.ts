@@ -3,6 +3,7 @@ import { type Address } from 'viem';
 import { useProfile } from './useProfile';
 import { useWithdrawableBalance, useTipsSent } from './useTip';
 import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI } from '../services/contract.service';
+import { DEFAULT_CHAIN } from '../config/somnia.config';
 
 /**
  * Hook to get comprehensive user statistics
@@ -65,6 +66,7 @@ export const usePlatformStats = (): {
     address: CONTRACT_ADDRESSES.tipzCore,
     abi: TIPZ_CORE_ABI,
     functionName: 'getTotalUsers',
+    chainId: DEFAULT_CHAIN.id,
   });
 
   // Get total volume
@@ -72,6 +74,7 @@ export const usePlatformStats = (): {
     address: CONTRACT_ADDRESSES.tipzCore,
     abi: TIPZ_CORE_ABI,
     functionName: 'getTotalVolume',
+    chainId: DEFAULT_CHAIN.id,
   });
 
   // Get active creators
@@ -79,6 +82,7 @@ export const usePlatformStats = (): {
     address: CONTRACT_ADDRESSES.tipzCore,
     abi: TIPZ_CORE_ABI,
     functionName: 'getActiveCreators',
+    chainId: DEFAULT_CHAIN.id,
   });
 
   // Get total tip count
@@ -86,6 +90,7 @@ export const usePlatformStats = (): {
     address: CONTRACT_ADDRESSES.tipzCore,
     abi: TIPZ_CORE_ABI,
     functionName: 'getTotalTipCount',
+    chainId: DEFAULT_CHAIN.id,
   });
 
   const isLoading = usersLoading || volumeLoading || creatorsLoading || tipsLoading;

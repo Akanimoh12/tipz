@@ -2,6 +2,7 @@
 // This allows existing React hooks and components to work with minimal changes
 
 import { somniaStreamsService, type StreamSubscription } from './somnia-streams.service';
+import { getAddress, zeroAddress, isAddress, type Hex } from 'viem';
 import type {
   SomniaTipEvent,
   SomniaProfileCreatedEvent,
@@ -62,14 +63,139 @@ function convertProfileUpdatedEvent(event: SomniaProfileUpdatedEvent): ProfileEv
 /**
  * Converts Somnia SDK LeaderboardUpdate to legacy format
  */
+const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+
+function decodeLeaderboardRankings(payload: Uint8Array): LeaderboardUpdate['rankings'] {
+  if (!payload || payload.length === 0) {
+    return [];
+  }
+
+  const decodeToString = (): string => {
+    if (textDecoder) {
+      return textDecoder.decode(payload);
+    }
+
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(payload).toString('utf-8');
+    }
+
+    return '';
+  };
+
+  const toNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+
+    return undefined;
+  };
+
+  const toBigInt = (value: unknown): bigint | undefined => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === 'bigint') {
+      return value;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      try {
+        return BigInt(Math.round(value));
+      } catch {
+        return undefined;
+      }
+    }
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+      try {
+        return BigInt(value);
+      } catch {
+        return undefined;
+      }
+    }
+
+    return undefined;
+  };
+
+  try {
+    const decoded = decodeToString();
+    if (!decoded) {
+      return [];
+    }
+
+    const parsed = JSON.parse(decoded);
+    if (!Array.isArray(parsed)) {
+      console.warn('Unexpected leaderboard payload format:', parsed);
+      return [];
+    }
+
+    return parsed
+      .map((entry, index): LeaderboardUpdate['rankings'][number] | null => {
+        if (!entry || typeof entry !== 'object') {
+          return null;
+        }
+
+        const username = typeof (entry as { username?: unknown }).username === 'string' && (entry as { username?: string }).username!.length > 0
+          ? (entry as { username: string }).username
+          : `rank-${index + 1}`;
+
+        const rawAddress = typeof entry.walletAddress === 'string'
+          ? entry.walletAddress
+          : typeof entry.address === 'string'
+            ? entry.address
+            : undefined;
+
+        let address: Hex;
+        if (rawAddress && isAddress(rawAddress)) {
+          try {
+            address = getAddress(rawAddress) as Hex;
+          } catch {
+            address = zeroAddress;
+          }
+        } else {
+          address = zeroAddress;
+        }
+
+        const score = toNumber(entry.score ?? entry.totalAmount ?? entry.amount) ?? 0;
+        const totalAmount = toBigInt(entry.totalAmount ?? entry.amount ?? entry.score);
+        const count = toNumber(entry.count ?? entry.tipsCount);
+        const creditScore = toNumber(entry.creditScore);
+        const rank = toNumber(entry.rank) ?? index + 1;
+
+        return {
+          address,
+          username,
+          score,
+          totalAmount: totalAmount ?? undefined,
+          count: count ?? undefined,
+          creditScore: creditScore ?? undefined,
+          rank,
+        };
+      })
+      .filter((entry): entry is LeaderboardUpdate['rankings'][number] => entry !== null);
+  } catch (error) {
+    console.warn('Failed to decode leaderboard rankings payload:', error);
+    return [];
+  }
+}
+
 function convertLeaderboardUpdate(event: SomniaLeaderboardUpdate): LeaderboardUpdate {
-  // Decode rankings from bytes to array format
-  // Note: This is a simplified conversion - actual implementation depends on encoding format
-  const rankings: LeaderboardUpdate['rankings'] = [];
-  
-  // TODO: Implement proper decoding of rankings bytes data when contract integration is complete
-  // For now, return empty rankings array as placeholder
-  
+  const rankings = decodeLeaderboardRankings(event.rankings);
+
   return {
     type: event.updateType === 'top_creators' ? 'top_creators' : 'top_tippers',
     rankings,

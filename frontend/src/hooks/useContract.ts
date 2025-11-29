@@ -9,6 +9,7 @@ import {
   TIPZ_CORE_ABI,
   parseContractError 
 } from '../services/contract.service';
+import { DEFAULT_CHAIN } from '../config/somnia.config';
 
 export interface UseContractReadResult<T> {
   data: T | undefined;
@@ -38,6 +39,7 @@ export const useProfileRead = <T,>(
     abi: TIPZ_PROFILE_ABI,
     functionName,
     args,
+    chainId: DEFAULT_CHAIN.id,
   });
 
   return {
@@ -58,6 +60,7 @@ export const useTipzCoreRead = <T,>(
     abi: TIPZ_CORE_ABI,
     functionName,
     args,
+    chainId: DEFAULT_CHAIN.id,
   });
 
   return {
@@ -98,6 +101,7 @@ export const useProfileWrite = (
       functionName,
       args: args || [],
       value,
+      chainId: DEFAULT_CHAIN.id,
     });
   } : undefined;
 
@@ -108,6 +112,7 @@ export const useProfileWrite = (
       functionName,
       args: args || [],
       value,
+      chainId: DEFAULT_CHAIN.id,
     });
   } : undefined;
 
@@ -155,6 +160,7 @@ export const useTipzCoreWrite = (
       functionName,
       args: args || [],
       value,
+      chainId: DEFAULT_CHAIN.id,
     });
   } : undefined;
 
@@ -165,6 +171,7 @@ export const useTipzCoreWrite = (
       functionName,
       args: args || [],
       value,
+      chainId: DEFAULT_CHAIN.id,
     });
   } : undefined;
 

@@ -29,6 +29,7 @@ interface UseLiveTickerStreamResult {
   connectionState: 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
   totalTipsReceived: number;
   clearTips: () => void;
+  reconnect: () => Promise<void>;
 }
 
 export function useLiveTickerStream(
@@ -82,7 +83,7 @@ export function useLiveTickerStream(
     [transformTipEvent, windowSize]
   );
 
-  const { connectionState, isConnected } = useTipStream({
+  const { connectionState, isConnected, reconnect } = useTipStream({
     onEvent: handleTipEvent,
     enabled,
     keepHistory: false,
@@ -101,6 +102,7 @@ export function useLiveTickerStream(
     connectionState,
     totalTipsReceived,
     clearTips,
+    reconnect,
   };
 }
 

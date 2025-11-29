@@ -36,13 +36,19 @@ export interface ProfileEvent {
 /**
  * Legacy leaderboard update format
  */
+export interface LeaderboardRanking {
+  address: Hex;
+  username: string;
+  score: number;
+  totalAmount?: bigint;
+  count?: number;
+  creditScore?: number;
+  rank?: number;
+}
+
 export interface LeaderboardUpdate {
   type: 'top_creators' | 'top_tippers';
-  rankings: Array<{
-    address: Hex;
-    username: string;
-    score: number;
-  }>;
+  rankings: LeaderboardRanking[];
   timestamp: number;
 }
 

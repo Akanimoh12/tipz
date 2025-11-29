@@ -73,6 +73,7 @@
     "vite-plugin-pwa": "^1.1.0",
     "vite-plugin-remove-console": "^2.2.0",
     "vitest": "^1.0.0",
-    "workbox-window": "^7.3.0"
+    "workbox-window": "^7.3.0",
+    "typescript-eslint": "^7.0.0"
   }
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense, memo } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { Navbar, Footer, TipModal, WithdrawModal, CelebrationModal } from '@/components/organisms';
 import { Skeleton } from '@/components/atoms';
 import { useContractEventListener } from '@/hooks/useContractEventListener';
@@ -11,6 +11,26 @@ const Register = lazy(() => import('@/pages').then(module => ({ default: module.
 const Profile = lazy(() => import('@/pages').then(module => ({ default: module.Profile })));
 const Leaderboard = lazy(() => import('@/pages').then(module => ({ default: module.Leaderboard })));
 const NotFound = lazy(() => import('@/pages').then(module => ({ default: module.NotFound })));
+
+// Route guard that only allows handles starting with "@" to reach the profile page.
+function ProfileRouteGuard() {
+  const { username } = useParams<{ username: string }>();
+  let decodedUsername = username ?? '';
+
+  try {
+    decodedUsername = username ? decodeURIComponent(username) : '';
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('Failed to decode username parameter:', error);
+    }
+  }
+
+  if (!decodedUsername.startsWith('@')) {
+    return <NotFound />;
+  }
+
+  return <Profile />;
+}
 
 // Loading fallback component
 function PageLoader() {
@@ -113,7 +133,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/register" element={<Register />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/@:username" element={<Profile />} />
+              <Route path="/:username" element={<ProfileRouteGuard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

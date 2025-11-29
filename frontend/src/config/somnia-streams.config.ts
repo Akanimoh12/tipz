@@ -1,5 +1,7 @@
 // Somnia Data Streams Schema Configuration
 
+import { SchemaEncoder } from '@somnia-chain/streams';
+
 export const TIP_EVENT_SCHEMA = `
   uint256 tipId,
   address fromAddress,
@@ -42,6 +44,8 @@ export const STREAM_SCHEMA_NAMES = {
   PROFILE_UPDATED: 'PROFILE_UPDATED',
   LEADERBOARD_UPDATE: 'LEADERBOARD_UPDATE',
 } as const;
+
+export type StreamSchemaName = typeof STREAM_SCHEMA_NAMES[keyof typeof STREAM_SCHEMA_NAMES];
 
 export interface SomniaTipEvent {
   tipId: bigint;
@@ -100,3 +104,27 @@ export const SCHEMA_REGISTRY = {
   [STREAM_SCHEMA_NAMES.PROFILE_UPDATED]: PROFILE_UPDATED_SCHEMA,
   [STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE]: LEADERBOARD_UPDATE_SCHEMA,
 } as const;
+
+export interface StreamSchemaDefinition {
+  schema: string;
+  encoder: SchemaEncoder;
+}
+
+export const STREAM_SCHEMA_DEFINITIONS: Record<StreamSchemaName, StreamSchemaDefinition> = {
+  [STREAM_SCHEMA_NAMES.TIP_EVENT]: {
+    schema: TIP_EVENT_SCHEMA,
+    encoder: new SchemaEncoder(TIP_EVENT_SCHEMA),
+  },
+  [STREAM_SCHEMA_NAMES.PROFILE_CREATED]: {
+    schema: PROFILE_CREATED_SCHEMA,
+    encoder: new SchemaEncoder(PROFILE_CREATED_SCHEMA),
+  },
+  [STREAM_SCHEMA_NAMES.PROFILE_UPDATED]: {
+    schema: PROFILE_UPDATED_SCHEMA,
+    encoder: new SchemaEncoder(PROFILE_UPDATED_SCHEMA),
+  },
+  [STREAM_SCHEMA_NAMES.LEADERBOARD_UPDATE]: {
+    schema: LEADERBOARD_UPDATE_SCHEMA,
+    encoder: new SchemaEncoder(LEADERBOARD_UPDATE_SCHEMA),
+  },
+};

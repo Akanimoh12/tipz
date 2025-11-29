@@ -1,6 +1,8 @@
-import { useReadContract } from 'wagmi';
+import { useEffect, useMemo, useState } from 'react';
+import { usePublicClient, useReadContract } from 'wagmi';
 import { type Address } from 'viem';
-import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI, TIPZ_PROFILE_ABI, type LeaderboardEntry as ContractLeaderboardEntry } from '../services/contract.service';
+import { CONTRACT_ADDRESSES, TIPZ_CORE_ABI, TIPZ_PROFILE_ABI, type LeaderboardEntry as ContractLeaderboardEntry, type Profile, transformProfile } from '../services/contract.service';
+import { DEFAULT_CHAIN } from '../config/somnia.config';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -10,6 +12,18 @@ export interface LeaderboardEntry {
   count: number;
   creditScore?: number;
   walletAddress: Address;
+}
+
+export interface CreatorDirectoryEntry {
+  username: string;
+  walletAddress: Address;
+  creditScore: number;
+  followers: number;
+  totalTipsCount: bigint;
+  totalTipsReceived: bigint;
+  profileImageIpfs?: string;
+  createdAt: bigint;
+  isActive: boolean;
 }
 
 // Transform contract leaderboard entry to our interface
@@ -39,6 +53,7 @@ export const useTopCreators = (limit: number = 50) => {
     abi: TIPZ_CORE_ABI,
     functionName: 'getTopCreators',
     args: [BigInt(limit)],
+    chainId: DEFAULT_CHAIN.id,
   });
 
   // Debug logging
@@ -74,6 +89,7 @@ export const useTopTippers = (limit: number = 50) => {
     abi: TIPZ_CORE_ABI,
     functionName: 'getTopTippers',
     args: [BigInt(limit)],
+    chainId: DEFAULT_CHAIN.id,
   });
 
   const tippers = rawTippers 
@@ -99,6 +115,7 @@ export const useUserRank = (username: string) => {
     abi: TIPZ_CORE_ABI,
     functionName: 'getUserRank',
     args: username ? [username] : undefined,
+    chainId: DEFAULT_CHAIN.id,
     query: {
       enabled: !!username,
     },
@@ -124,6 +141,7 @@ export const useAllRegisteredUsers = () => {
     address: CONTRACT_ADDRESSES.tipzProfile,
     abi: TIPZ_PROFILE_ABI,
     functionName: 'getTotalRegistrations',
+    chainId: DEFAULT_CHAIN.id,
   });
 
   console.log('[useAllRegisteredUsers Debug]', {
@@ -138,6 +156,137 @@ export const useAllRegisteredUsers = () => {
   return {
     totalRegistrations: (isError || !totalRegistrations) ? 0 : Number(totalRegistrations),
     isLoading: loadingTotal,
+    error,
+  };
+};
+
+const mapProfileToDirectoryEntry = (profile: Profile): CreatorDirectoryEntry => {
+  return {
+    username: profile.xUsername,
+    walletAddress: profile.walletAddress,
+    creditScore: profile.creditScore,
+    followers: Number(profile.xFollowers),
+    totalTipsCount: profile.totalTipsCount,
+    totalTipsReceived: profile.totalTipsReceived,
+    profileImageIpfs: profile.profileImageIpfs,
+    createdAt: profile.createdAt,
+    isActive: profile.isActive,
+  };
+};
+
+interface CreatorDirectoryOptions {
+  limit?: number;
+  includeInactive?: boolean;
+}
+
+export const useCreatorDirectory = (
+  totalRegistrations: number,
+  options?: CreatorDirectoryOptions
+) => {
+  const limit = options?.limit ?? 50;
+  const includeInactive = options?.includeInactive ?? false;
+  const client = usePublicClient({ chainId: DEFAULT_CHAIN.id });
+
+  const [creators, setCreators] = useState<CreatorDirectoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCreators = async () => {
+      if (!client) {
+        return;
+      }
+
+      if (!totalRegistrations) {
+        if (!cancelled) {
+          setCreators([]);
+          setError(null);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const fetchCount = Math.min(totalRegistrations, limit);
+
+        if (fetchCount <= 0) {
+          if (!cancelled) {
+            setCreators([]);
+          }
+          return;
+        }
+
+        const indices = Array.from({ length: fetchCount }, (_, index) =>
+          BigInt(totalRegistrations - 1 - index)
+        );
+
+        const addresses = await Promise.all(
+          indices.map((idx) =>
+            client.readContract({
+              address: CONTRACT_ADDRESSES.tipzProfile,
+              abi: TIPZ_PROFILE_ABI,
+              functionName: 'getRegisteredUserAtIndex',
+              args: [idx],
+            }) as Promise<Address>
+          )
+        );
+
+        const uniqueAddresses = Array.from(new Set(addresses.filter(Boolean)));
+
+        const profiles = await Promise.all(
+          uniqueAddresses.map((address) =>
+            client.readContract({
+              address: CONTRACT_ADDRESSES.tipzProfile,
+              abi: TIPZ_PROFILE_ABI,
+              functionName: 'getProfile',
+              args: [address],
+            })
+          )
+        );
+
+        const mapped = profiles
+          .map((rawProfile) => mapProfileToDirectoryEntry(transformProfile(rawProfile)))
+          .filter((entry) => entry.username && (includeInactive || entry.isActive));
+
+        const sorted = mapped.sort((a, b) => {
+          const diff = Number(b.createdAt - a.createdAt);
+          if (diff !== 0) {
+            return diff;
+          }
+          return a.username.localeCompare(b.username);
+        });
+
+        if (!cancelled) {
+          setCreators(sorted);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Failed to load creators directory'));
+          setCreators([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void fetchCreators();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, includeInactive, limit, totalRegistrations]);
+
+  const summaries = useMemo(() => creators, [creators]);
+
+  return {
+    creators: summaries,
+    isLoading,
     error,
   };
 };

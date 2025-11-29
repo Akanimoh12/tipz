@@ -17,6 +17,20 @@ import { useProfile, useProfileByUsername } from '@/hooks/useProfile';
 import { useTipsReceived } from '@/hooks/useTip';
 import { xapiService } from '@/services/xapi.service';
 
+const PINATA_GATEWAY_URL = import.meta.env.VITE_PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud';
+
+const resolveProfileImageUrl = (ipfsHash?: string): string | undefined => {
+  if (!ipfsHash) {
+    return undefined;
+  }
+
+  if (ipfsHash.startsWith('http')) {
+    return ipfsHash;
+  }
+
+  const cleanHash = ipfsHash.replace(/^ipfs?:\/{2}/, '').replace(/^ipfs\//, '');
+  return `${PINATA_GATEWAY_URL}/ipfs/${cleanHash}`;
+};
 
 interface ProfileData {
   username: string;
@@ -268,7 +282,7 @@ export function Profile() {
           <Card variant="elevated" padding="lg" className="mb-lg">
             <div className="flex flex-col md:flex-row items-start gap-lg">
                             <Avatar
-                src={profile.profileImageIpfs}
+                src={resolveProfileImageUrl(profile.profileImageIpfs)}
                 alt={`${profile.username} profile`}
                 fallbackText={profile.username.slice(0, 2).toUpperCase()}
                 size="xl"

@@ -16,7 +16,7 @@ console.log('   Redirect URI:', `${appUrl || 'http://localhost:5173'}/register`)
 
 // Check if running on correct port
 console.log('\n2. Server Check:');
-const currentUrl = window.location.origin;
+const currentUrl = globalThis.location?.origin || 'http://localhost:5173';
 console.log('   Current URL:', currentUrl);
 if (currentUrl === 'http://localhost:5173') {
   console.log('   Status: ✅ Correct port');
@@ -33,15 +33,15 @@ console.log('   Encoded:', encodeURIComponent(redirectUri));
 
 // Check session storage
 console.log('\n4. Session Storage:');
-const oauthState = sessionStorage.getItem('tipz_x_oauth_state');
+const oauthState = globalThis.sessionStorage?.getItem('tipz_x_oauth_state');
 if (oauthState) {
   console.log('   OAuth State: ✅ Found');
   try {
     const parsed = JSON.parse(oauthState);
     console.log('   State:', parsed.state);
     console.log('   Redirect:', parsed.redirectUri);
-  } catch (e) {
-    console.log('   ⚠️ Error parsing state');
+  } catch (error) {
+    console.error('   ⚠️ Error parsing state:', error);
   }
 } else {
   console.log('   OAuth State: ℹ️ None (normal before OAuth)');
@@ -49,14 +49,14 @@ if (oauthState) {
 
 // Check local storage
 console.log('\n5. Local Storage:');
-const userData = localStorage.getItem('tipz_x_user_data');
+const userData = globalThis.localStorage?.getItem('tipz_x_user_data');
 if (userData) {
   console.log('   User Data: ✅ Found (previously connected)');
   try {
     const parsed = JSON.parse(userData);
     console.log('   Username:', parsed.username);
-  } catch (e) {
-    console.log('   ⚠️ Error parsing user data');
+  } catch (error) {
+    console.error('   ⚠️ Error parsing user data:', error);
   }
 } else {
   console.log('   User Data: ℹ️ None (not connected yet)');
@@ -79,5 +79,3 @@ console.log('1. Verify all settings in X Developer Portal');
 console.log('2. Save changes and wait 2-5 minutes');
 console.log('3. Clear browser cache or use incognito');
 console.log('4. Try connecting X account again');
-
-export {};
