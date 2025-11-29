@@ -1,42 +1,39 @@
-# Tipz - Turn Your X Influence Into On-Chain Reputation
+# Tipz – Tokenize X Influence With Somnia Data Streams
 
-**Tokenize your X (Twitter) social presence and unlock Web3 opportunities based on your real influence.**
+**Tipz converts the influence you have already earned on X into verifiable on-chain reputation, powered end-to-end by Somnia Data Streams for real-time experiences.**
 
-Tipz transforms your X account into verifiable on-chain reputation, enabling instant peer-to-peer support powered by Somnia's real-time blockchain infrastructure.
-
----
-
-## 🎯 The Problem
-
-Millions of creators and active X users have built genuine influence and communities, but:
-- **Their social capital is locked in Web2** - followers, engagement, and credibility only exist on centralized platforms
-- **No way to monetize influence directly** - traditional monetization requires intermediaries, sponsorships, or platform-specific programs
-- **Social reputation is not portable** - influence on X doesn't translate to opportunities in Web3, DeFi, or on-chain ecosystems
-- **Supporters lack direct ways to show appreciation** - likes and retweets don't provide tangible value to creators
-
-**The opportunity**: 100M+ X users who could benefit from on-chain reputation but have never entered Web3.
+By streaming live social capital straight into Web3, Tipz makes it effortless for 100M+ X users to participate in decentralized economies, receive instant peer-to-peer support, and unlock new reputation-based opportunities.
 
 ---
 
-## 💡 Our Solution
+## 🎯 Why Now
 
-**Tipz converts your X social metrics into verifiable on-chain reputation** that unlocks new opportunities:
+Creators have poured years into building audiences on X, yet their reach remains trapped in closed networks:
+- **Influence is stuck in Web2 silos** – followers, engagement, and credibility disappear the moment you leave the app.
+- **Monetization is gated** – sponsorships, ads, and subscriptions keep creators dependent on intermediaries.
+- **Reputation isn’t portable** – social capital on X rarely translates into Web3 access, capital, or ownership.
+- **Supporters can’t act instantly** – likes and retweets feel good, but they don’t deliver direct value.
 
-### For Creators & Influencers:
-✅ **Tokenize Your Influence** - Your followers, posts, and engagement become an on-chain credit score  
-✅ **Receive Direct Support** - Supporters send tips instantly without intermediaries (2% platform fee)  
-✅ **Build Verifiable Reputation** - Your on-chain profile proves your influence across Web3  
-✅ **Unlock Future Opportunities** - Higher credit scores can enable lending, governance rights, exclusive access, and more
+Tipz breaks that stalemate: one connection, and your X presence becomes a live on-chain reputation stream that anyone can engage with in real time.
 
-### For Supporters:
-✅ **Support Creators Directly** - Send appreciation in seconds with crypto  
-✅ **Build Your Own Reputation** - Active supporters earn on-chain credit too  
-✅ **Transparent & Fair** - All transactions recorded on blockchain, no hidden fees
+---
 
-### The Magic:
-**Simply connect your X account** → Your social metrics (followers, posts, engagement) are analyzed → **Instant on-chain credit score** → Start receiving/sending tips immediately.
+## 💡 How Tipz Delivers
 
-**Not just tipping. It's bringing your Web2 influence into Web3.**
+**Tipz tokenizes your X footprint and streams it into Web3 using Somnia Data Streams, making reputation liquid and actionable.**
+
+### For Creators & Influencers
+✅ **Influence → Reputation** – Followers, posts, and engagement convert into a live, on-chain credit score.
+✅ **Instant Peer Support** – Receive tips in seconds with only a 2% platform fee and sub-cent gas costs.
+✅ **Always-On Proof** – Your Somnia-backed profile becomes portable proof of credibility anywhere in Web3.
+✅ **Future-Ready** – Reputation tiers unlock forthcoming features like lending, governance, and gated access.
+
+### For Supporters
+✅ **Direct Appreciation** – Send value instantly; creators receive 98% of every tip.
+✅ **Grow Your Own Reputation** – Support activity feeds your personal score and future benefits.
+✅ **Transparent & Real-Time** – Every interaction is on-chain, and Somnia Streams keeps the UI perfectly in sync.
+
+**Flow:** Connect wallet → Connect X → Tipz transforms metrics into a live credit score → Share your `tipz.app/@username` → Receive and see tips instantly, thanks to Somnia Data Streams.
 
 ## 🔥 Why Somnia Network + Data Streams?
 
@@ -82,7 +79,9 @@ Transaction happens → See update instantly (2-3 seconds) → No refresh needed
 
 ---
 
-## 🏗️ Architecture
+## 🧠 How the Experience Stays Live
+
+Somnia Streams keeps every piece of the experience synchronized, while Tipz smart contracts turn X metrics into trust that everyone can see.
 
 ### On-Chain Reputation System
 
@@ -106,7 +105,7 @@ Credit Score Formula:
 - ✅ Your X metrics grow
 - ✅ You actively participate in the ecosystem
 
-### Smart Contract System
+### Real-Time Contract Loop
 
 ```
 ┌─────────────────┐
@@ -135,6 +134,8 @@ Credit Score Formula:
 - **Chain ID**: 50312
 - **Currency**: STT (Somnia Test Tokens)
 - **Explorer**: https://somniascan.io
+
+Every contract event is streamed straight into the UI, so creators and supporters never wait to feel momentum building.
 
 ---
 
@@ -193,7 +194,9 @@ Credit Score Formula:
 
 ---
 
-## 🎯 Tech Stack (For Developers)
+## 🛠️ Builder Appendix (Optional)
+
+Curious how it all works under the hood? Here’s the snapshot for teams integrating or extending Tipz.
 
 ### Smart Contracts
 - **Blockchain:** Somnia Network (EVM-compatible)
