@@ -19,9 +19,14 @@ export interface UseContractReadResult<T> {
   refetch: () => void;
 }
 
+type ContractWriteOverrides = {
+  args?: readonly unknown[];
+  value?: bigint;
+};
+
 export interface UseContractWriteResult {
-  write: (() => void) | undefined;
-  writeAsync: (() => Promise<`0x${string}`>) | undefined;
+  write: ((overrides?: ContractWriteOverrides) => void) | undefined;
+  writeAsync: ((overrides?: ContractWriteOverrides) => Promise<`0x${string}`>) | undefined;
   data: `0x${string}` | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -80,6 +85,7 @@ export const useProfileWrite = (
   const { 
     data: hash, 
     writeContract, 
+    writeContractAsync,
     isPending,
     isError: isWriteError,
     error: writeError 
@@ -94,27 +100,31 @@ export const useProfileWrite = (
     hash,
   });
 
-  const write = writeContract ? () => {
-    writeContract({
-      address: CONTRACT_ADDRESSES.tipzProfile,
-      abi: TIPZ_PROFILE_ABI,
-      functionName,
-      args: args || [],
-      value,
-      chainId: DEFAULT_CHAIN.id,
-    });
-  } : undefined;
+  const write = writeContract
+    ? (overrides?: ContractWriteOverrides) => {
+        writeContract({
+          address: CONTRACT_ADDRESSES.tipzProfile,
+          abi: TIPZ_PROFILE_ABI,
+          functionName,
+          args: (overrides?.args ?? args ?? []) as readonly unknown[],
+          value: overrides?.value ?? value,
+          chainId: DEFAULT_CHAIN.id,
+        });
+      }
+    : undefined;
 
-  const writeAsync = writeContract ? async () => {
-    return writeContract({
-      address: CONTRACT_ADDRESSES.tipzProfile,
-      abi: TIPZ_PROFILE_ABI,
-      functionName,
-      args: args || [],
-      value,
-      chainId: DEFAULT_CHAIN.id,
-    });
-  } : undefined;
+  const writeAsync = writeContractAsync
+    ? async (overrides?: ContractWriteOverrides) => {
+        return writeContractAsync({
+          address: CONTRACT_ADDRESSES.tipzProfile,
+          abi: TIPZ_PROFILE_ABI,
+          functionName,
+          args: (overrides?.args ?? args ?? []) as readonly unknown[],
+          value: overrides?.value ?? value,
+          chainId: DEFAULT_CHAIN.id,
+        });
+      }
+    : undefined;
 
   const error = writeError ?? confirmError;
   const isLoading = isPending || isConfirming;
@@ -139,6 +149,7 @@ export const useTipzCoreWrite = (
   const { 
     data: hash, 
     writeContract, 
+    writeContractAsync,
     isPending,
     isError: isWriteError,
     error: writeError 
@@ -153,27 +164,31 @@ export const useTipzCoreWrite = (
     hash,
   });
 
-  const write = writeContract ? () => {
-    writeContract({
-      address: CONTRACT_ADDRESSES.tipzCore,
-      abi: TIPZ_CORE_ABI,
-      functionName,
-      args: args || [],
-      value,
-      chainId: DEFAULT_CHAIN.id,
-    });
-  } : undefined;
+  const write = writeContract
+    ? (overrides?: ContractWriteOverrides) => {
+        writeContract({
+          address: CONTRACT_ADDRESSES.tipzCore,
+          abi: TIPZ_CORE_ABI,
+          functionName,
+          args: (overrides?.args ?? args ?? []) as readonly unknown[],
+          value: overrides?.value ?? value,
+          chainId: DEFAULT_CHAIN.id,
+        });
+      }
+    : undefined;
 
-  const writeAsync = writeContract ? async () => {
-    return writeContract({
-      address: CONTRACT_ADDRESSES.tipzCore,
-      abi: TIPZ_CORE_ABI,
-      functionName,
-      args: args || [],
-      value,
-      chainId: DEFAULT_CHAIN.id,
-    });
-  } : undefined;
+  const writeAsync = writeContractAsync
+    ? async (overrides?: ContractWriteOverrides) => {
+        return writeContractAsync({
+          address: CONTRACT_ADDRESSES.tipzCore,
+          abi: TIPZ_CORE_ABI,
+          functionName,
+          args: (overrides?.args ?? args ?? []) as readonly unknown[],
+          value: overrides?.value ?? value,
+          chainId: DEFAULT_CHAIN.id,
+        });
+      }
+    : undefined;
 
   const error = writeError ?? confirmError;
   const isLoading = isPending || isConfirming;

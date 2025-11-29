@@ -10,6 +10,9 @@ import { Avatar } from '@/components/atoms/Avatar';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { calculatePlatformFee, calculateRecipientAmount, parseTipAmount } from '@/services/contract.service';
+import { useAccount } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
+import toast from 'react-hot-toast';
 
 const tipFormSchema = z.object({
   amount: z
@@ -26,6 +29,8 @@ export function TipModal() {
   const { isOpen, data } = useTipModal();
   const { closeModal } = useModalStore();
   const { mutate: sendTip, isPending } = useSendTip();
+  const { isConnected, address: walletAddress } = useAccount();
+  const { openConnectModal } = useConnectModal();
 
   const {
     register,
@@ -51,6 +56,15 @@ export function TipModal() {
 
   const onSubmit = (formData: TipFormData) => {
     if (!data) return;
+    if (!isConnected) {
+      toast.error('Please connect your wallet to send tips.');
+      return;
+    }
+
+    if (data.toAddress && walletAddress && data.toAddress.toLowerCase() === walletAddress.toLowerCase()) {
+      toast.error('You cannot tip yourself.');
+      return;
+    }
 
     sendTip(
       {
@@ -60,7 +74,6 @@ export function TipModal() {
       },
       {
         onSuccess: () => {
-          closeModal('tip');
           reset();
         },
       }
@@ -77,6 +90,10 @@ export function TipModal() {
   const tipAmount = amountValue ? parseTipAmount(amountValue) : 0n;
   const platformFee = tipAmount ? calculatePlatformFee(tipAmount) : 0n;
   const recipientAmount = tipAmount ? calculateRecipientAmount(tipAmount) : 0n;
+  const isSelfTip = Boolean(
+    data?.toAddress && walletAddress && data.toAddress.toLowerCase() === walletAddress.toLowerCase()
+  );
+  const isFormDisabled = isPending || !isConnected || isSelfTip;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -142,13 +159,13 @@ export function TipModal() {
 
                     <Input
                       {...register('amount')}
-                      label="Amount (ETH)"
+                      label="Amount (STT)"
                       type="number"
                       step="0.001"
                       min="0.001"
                       placeholder="0.001"
                       error={errors.amount?.message}
-                      disabled={isPending}
+                      disabled={isFormDisabled}
                       autoFocus
                     />
 
@@ -162,7 +179,7 @@ export function TipModal() {
                         placeholder="Say something nice..."
                         rows={3}
                         maxLength={280}
-                        disabled={isPending}
+                        disabled={isFormDisabled}
                         className="w-full px-sm py-xs border-3 border-primary bg-secondary text-primary rounded-brutalist placeholder:text-primary/50 focus:outline-none focus:shadow-brutalist transition-shadow resize-none disabled:opacity-50"
                       />
                       {errors.message && (
@@ -172,20 +189,44 @@ export function TipModal() {
                       )}
                     </div>
 
+                    {!isConnected && (
+                      <div className="p-sm bg-accent border-3 border-primary rounded-brutalist text-body-sm text-primary/80">
+                        <p className="font-semibold mb-2xs">Connect wallet to continue</p>
+                        <p className="mb-sm">
+                          You need to connect your Somnia wallet before sending tips.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="brand"
+                          size="sm"
+                          onClick={() => openConnectModal?.()}
+                        >
+                          Connect Wallet
+                        </Button>
+                      </div>
+                    )}
+
+                    {isSelfTip && (
+                      <div className="p-sm bg-red-100 border-3 border-red-500 rounded-brutalist text-body-sm text-red-800">
+                        <p className="font-semibold">Self tipping is not allowed.</p>
+                        <p>Please select a different creator to send a tip.</p>
+                      </div>
+                    )}
+
                     {tipAmount > 0n && (
                       <div className="p-sm bg-accent border-3 border-primary rounded-brutalist space-y-2xs text-body-sm">
                         <div className="flex justify-between">
                           <span className="text-primary/70">Tip Amount:</span>
-                          <span className="font-bold">{amountValue} ETH</span>
+                          <span className="font-bold">{amountValue} STT</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-primary/70">Platform Fee (2%):</span>
-                          <span>{(Number(platformFee) / 1e18).toFixed(6)} ETH</span>
+                          <span>{(Number(platformFee) / 1e18).toFixed(6)} STT</span>
                         </div>
                         <div className="flex justify-between pt-2xs border-t-2 border-primary">
                           <span className="font-bold">Creator Receives:</span>
                           <span className="font-bold text-green-600">
-                            {(Number(recipientAmount) / 1e18).toFixed(6)} ETH
+                            {(Number(recipientAmount) / 1e18).toFixed(6)} STT
                           </span>
                         </div>
                       </div>
@@ -205,7 +246,7 @@ export function TipModal() {
                       <Button
                         type="submit"
                         variant="brand"
-                        disabled={isPending}
+                        disabled={isFormDisabled}
                         isLoading={isPending}
                         className="flex-1"
                       >

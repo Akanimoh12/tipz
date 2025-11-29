@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import toast from 'react-hot-toast';
 import { type Address } from 'viem';
 import { useTipzCoreWrite, useTipzCoreRead } from './useContract';
@@ -9,6 +9,8 @@ import {
   calculateRecipientAmount,
   type TipRecord 
 } from '../services/contract.service';
+import { useModalStore } from '@/store';
+import { xapiService } from '@/services/xapi.service';
 
 export const useWithdrawableBalance = (address?: Address) => {
   const { address: connectedAddress } = useAccount();
@@ -30,7 +32,11 @@ export const useWithdrawableBalance = (address?: Address) => {
 
 export const useSendTip = () => {
   const queryClient = useQueryClient();
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const openCelebrationModal = useModalStore((state) => state.openCelebrationModal);
+  const closeModal = useModalStore((state) => state.closeModal);
+  const sendTipWrite = useTipzCoreWrite('sendTip');
 
   return useMutation({
     mutationFn: async (params: {
@@ -38,20 +44,27 @@ export const useSendTip = () => {
       amount: string;
       message: string;
     }) => {
+      if (!isConnected || !address) {
+        throw new Error('Please connect your wallet to send tips.');
+      }
+
+      if (!publicClient) {
+        throw new Error('Blockchain client not available. Please try again.');
+      }
+
       const amountWei = parseTipAmount(params.amount);
       const recipientAmount = calculateRecipientAmount(amountWei);
 
-      const { writeAsync } = useTipzCoreWrite(
-        'sendTip',
-        [params.toUsername, params.message],
-        amountWei
-      );
-
-      if (!writeAsync) {
+      if (!sendTipWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      const hash = await writeAsync();
+      const hash = await sendTipWrite.writeAsync({
+        args: [params.toUsername, params.message],
+        value: amountWei,
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash });
 
       return { 
         hash, 
@@ -94,6 +107,23 @@ export const useSendTip = () => {
         `Successfully tipped ${data.recipientAmount} STT to @${data.toUsername}!`,
         { duration: 5000 }
       );
+
+      const shareText = xapiService.generateShareText({
+        type: 'tip',
+        username: data.toUsername,
+        amount: data.recipientAmount,
+      });
+
+      const shareUrl = xapiService.getShareUrl(shareText);
+
+      openCelebrationModal({
+        type: 'tip_sent',
+        amount: data.recipientAmount,
+        username: data.toUsername,
+        shareUrl,
+      });
+
+      closeModal('tip');
     },
   });
 };
@@ -101,18 +131,19 @@ export const useSendTip = () => {
 export const useWithdrawTips = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const withdrawTipsWrite = useTipzCoreWrite('withdrawTips');
 
   return useMutation({
     mutationFn: async (amount: string) => {
       const amountWei = parseTipAmount(amount);
 
-      const { writeAsync } = useTipzCoreWrite('withdrawTips', [amountWei]);
-
-      if (!writeAsync) {
+      if (!withdrawTipsWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      const hash = await writeAsync();
+      const hash = await withdrawTipsWrite.writeAsync({
+        args: [amountWei],
+      });
 
       return { hash, amount };
     },
@@ -151,16 +182,15 @@ export const useWithdrawTips = () => {
 export const useWithdrawAllTips = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const withdrawAllTipsWrite = useTipzCoreWrite('withdrawAllTips');
 
   return useMutation({
     mutationFn: async () => {
-      const { writeAsync } = useTipzCoreWrite('withdrawAllTips');
-
-      if (!writeAsync) {
+      if (!withdrawAllTipsWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      const hash = await writeAsync();
+      const hash = await withdrawAllTipsWrite.writeAsync();
 
       return { hash };
     },

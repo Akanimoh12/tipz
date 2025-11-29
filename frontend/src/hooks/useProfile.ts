@@ -142,6 +142,7 @@ export const useIsUsernameTaken = (username: string) => {
 export const useRegisterProfile = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const registerProfileWrite = useProfileWrite('registerProfile');
 
   return useMutation({
     mutationFn: async (params: {
@@ -151,19 +152,19 @@ export const useRegisterProfile = () => {
       xReplies: number;
       profileImageIpfs: string;
     }) => {
-      const { writeAsync } = useProfileWrite('registerProfile', [
-        params.username,
-        params.xFollowers,
-        params.xPosts,
-        params.xReplies,
-        params.profileImageIpfs,
-      ]);
-
-      if (!writeAsync) {
+      if (!registerProfileWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      return writeAsync();
+      return registerProfileWrite.writeAsync({
+        args: [
+          params.username,
+          params.xFollowers,
+          params.xPosts,
+          params.xReplies,
+          params.profileImageIpfs,
+        ],
+      });
     },
     onSuccess: () => {
       if (address) {
@@ -177,16 +178,17 @@ export const useRegisterProfile = () => {
 export const useUpdateProfileMetadata = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const updateProfileMetadataWrite = useProfileWrite('updateProfileMetadata');
 
   return useMutation({
     mutationFn: async (profileImageIpfs: string) => {
-      const { writeAsync } = useProfileWrite('updateProfileMetadata', [profileImageIpfs]);
-
-      if (!writeAsync) {
+      if (!updateProfileMetadataWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      return writeAsync();
+      return updateProfileMetadataWrite.writeAsync({
+        args: [profileImageIpfs],
+      });
     },
     onSuccess: () => {
       if (address) {
@@ -199,6 +201,7 @@ export const useUpdateProfileMetadata = () => {
 export const useUpdateXMetrics = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const updateXMetricsWrite = useProfileWrite('updateXMetrics');
 
   return useMutation({
     mutationFn: async (params: {
@@ -206,17 +209,17 @@ export const useUpdateXMetrics = () => {
       xPosts: number;
       xReplies: number;
     }) => {
-      const { writeAsync } = useProfileWrite('updateXMetrics', [
-        params.xFollowers,
-        params.xPosts,
-        params.xReplies,
-      ]);
-
-      if (!writeAsync) {
+      if (!updateXMetricsWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      return writeAsync();
+      return updateXMetricsWrite.writeAsync({
+        args: [
+          params.xFollowers,
+          params.xPosts,
+          params.xReplies,
+        ],
+      });
     },
     onSuccess: () => {
       if (address) {
@@ -229,16 +232,15 @@ export const useUpdateXMetrics = () => {
 export const useDeactivateProfile = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const deactivateProfileWrite = useProfileWrite('deactivateProfile');
 
   return useMutation({
     mutationFn: async () => {
-      const { writeAsync } = useProfileWrite('deactivateProfile');
-
-      if (!writeAsync) {
+      if (!deactivateProfileWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      return writeAsync();
+      return deactivateProfileWrite.writeAsync();
     },
     onSuccess: () => {
       if (address) {
@@ -251,16 +253,15 @@ export const useDeactivateProfile = () => {
 export const useReactivateProfile = () => {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const reactivateProfileWrite = useProfileWrite('reactivateProfile');
 
   return useMutation({
     mutationFn: async () => {
-      const { writeAsync } = useProfileWrite('reactivateProfile');
-
-      if (!writeAsync) {
+      if (!reactivateProfileWrite.writeAsync) {
         throw new Error('Write function not available');
       }
 
-      return writeAsync();
+      return reactivateProfileWrite.writeAsync();
     },
     onSuccess: () => {
       if (address) {

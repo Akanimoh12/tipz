@@ -1,9 +1,10 @@
 import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Zap, Wallet, UserPlus, X } from 'lucide-react';
+import { CheckCircle, Zap, Wallet, UserPlus, X, Share2, ExternalLink } from 'lucide-react';
 import { useCelebrationModal, useModalStore } from '@/store';
 import { Button } from '@/components/atoms/Button';
+import { useNavigate } from 'react-router-dom';
 
 const confettiVariants = {
   initial: { opacity: 0, scale: 0 },
@@ -58,9 +59,22 @@ const iconVariants = {
 export function CelebrationModal() {
   const { isOpen, data } = useCelebrationModal();
   const { closeModal } = useModalStore();
+  const navigate = useNavigate();
 
   const handleClose = () => {
     closeModal('celebration');
+  };
+
+  const handleShare = () => {
+    if (!data?.shareUrl) return;
+    window.open(data.shareUrl, '_blank', 'width=550,height=420');
+  };
+
+  const handleViewProfile = () => {
+    if (!data?.username) return;
+    const profilePath = `/@${data.username}`;
+    handleClose();
+    navigate(profilePath);
   };
 
   const getIcon = () => {
@@ -99,15 +113,15 @@ export function CelebrationModal() {
     switch (data?.type) {
       case 'tip_sent':
         return data.amount && data.username
-          ? `You sent ${data.amount} ETH to @${data.username}`
+          ? `You sent ${data.amount} STT to @${data.username}`
           : 'Your tip has been sent!';
       case 'tip_received':
         return data.amount && data.username
-          ? `You received ${data.amount} ETH from @${data.username}`
+          ? `You received ${data.amount} STT from @${data.username}`
           : 'You received a tip!';
       case 'withdrawal':
         return data.amount
-          ? `${data.amount} ETH has been sent to your wallet`
+          ? `${data.amount} STT has been sent to your wallet`
           : 'Your withdrawal is complete!';
       case 'registration':
         return 'Your profile has been created. Start tipping creators!';
@@ -200,6 +214,34 @@ export function CelebrationModal() {
                     <Button onClick={handleClose} variant="primary" size="lg" className="w-full">
                       Awesome!
                     </Button>
+
+                    {(data?.shareUrl || data?.username) && (
+                      <div className="mt-sm grid gap-sm sm:grid-cols-2">
+                        {data?.shareUrl && (
+                          <Button
+                            type="button"
+                            variant="brand"
+                            onClick={handleShare}
+                            className="w-full"
+                          >
+                            <Share2 className="w-4 h-4 mr-2xs" />
+                            Share on X
+                          </Button>
+                        )}
+
+                        {data?.username && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleViewProfile}
+                            className="w-full"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2xs" />
+                            View Profile
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </Dialog.Panel>

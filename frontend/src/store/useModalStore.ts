@@ -29,6 +29,7 @@ export interface CelebrationModalData {
   amount?: string;
   username?: string;
   message?: string;
+  shareUrl?: string;
 }
 
 export type ModalData =
